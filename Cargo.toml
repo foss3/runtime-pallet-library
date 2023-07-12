@@ -1,8 +1,21 @@
-[package]
-name = "runtime-pallet-library"
-version = "0.1.0"
+[workspace]
+members = [
+    "foss3-mock-builder",
+]
+resolver = "2"
+
+[workspace.package]
+authors = ["Centrifuge <admin@centrifuge.io>"]
 edition = "2021"
+repository = "https://github.com/foss3/runtime-pallet-library"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace.dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+scale-info = { version = "2.3.0", features = ["derive"] }
 
-[dependencies]
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }

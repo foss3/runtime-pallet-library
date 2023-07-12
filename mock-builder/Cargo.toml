@@ -1,0 +1,28 @@
+[package]
+authors = ["Centrifuge <admin@centrifuge.io>"]
+description = "Build mock pallets from traits"
+edition = "2021"
+license = "LGPL-3.0"
+name = "mock-builder"
+repository = "https://github.com/centrifuge/centrifuge-chain"
+version = "0.0.1"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+frame-support = { workspace = true }
+
+[dev-dependencies]
+codec = { package = "parity-scale-codec", workspace = true, features = ["default"] }
+frame-system = { workspace = true, features = ["default"]  }
+scale-info = { workspace = true, features = ["default"]  }
+sp-core = { workspace = true, features = ["default"]  }
+sp-io = { workspace = true, features = ["default"]  }
+sp-runtime = { workspace = true, features = ["default"]  }
+
+[features]
+default = ["std"]
+std = [
+  "frame-support/std",
+]
