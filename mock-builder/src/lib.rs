@@ -329,11 +329,29 @@ macro_rules! register_call {
 	}};
 }
 
+/// Register a mock function into the mock function storage for a pallet with
+/// instances. Same as `register()` but it uses as locator who calls this macro.
+#[macro_export]
+macro_rules! register_call_instance {
+	($f:expr) => {{
+		$crate::register::<CallIds<T, I>, _, _, _, _>(|| (), $f)
+	}};
+}
+
 /// Execute a function from the function storage.
 /// Same as `execute()` but it uses as locator who calls this macro.
 #[macro_export]
 macro_rules! execute_call {
 	($input:expr) => {{
 		$crate::execute::<CallIds<T>, _, _, _>(|| (), $input)
+	}};
+}
+
+/// Execute a function from the function storage for a pallet with instances.
+/// Same as `execute()` but it uses as locator who calls this macro.
+#[macro_export]
+macro_rules! execute_call_instance {
+	($input:expr) => {{
+		$crate::execute::<CallIds<T, I>, _, _, _>(|| (), $input)
 	}};
 }
