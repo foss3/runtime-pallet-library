@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "foss3-mock-builder",
+    "mock-builder",
 ]
 resolver = "2"
 
