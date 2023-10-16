@@ -6,14 +6,14 @@ use super::util::TypeSignature;
 /// See `FunctionLocation::hash()`
 #[derive(Clone, Copy, Debug)]
 pub enum TraitInfo {
-	/// Create has with trait info, panics if it has not.
+	/// Create hash with trait info, panics if it has not.
 	Yes,
 
 	/// Create hash with no trait info
 	No,
 
 	/// Create the hash with the trait info if it has trait info
-	/// or not if it has not.
+	/// or not if it has none.
 	Whatever,
 }
 
@@ -144,8 +144,6 @@ impl FunctionLocation {
 				format!("{}{}", self.location, trait_info)
 			}
 		};
-
-		dbg!(trait_info, &string);
 
 		Hasher::hash(string.as_bytes())
 	}
