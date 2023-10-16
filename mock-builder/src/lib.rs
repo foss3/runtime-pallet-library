@@ -279,7 +279,7 @@ pub mod location;
 mod util;
 
 use frame_support::{Blake2_128, StorageHasher, StorageMap};
-use location::FunctionLocation;
+use location::{FunctionLocation, TraitInfo};
 pub use storage::CallId;
 
 /// Prefix that the register functions should have.
@@ -297,9 +297,13 @@ where
 	let location = FunctionLocation::from(locator)
 		.normalize()
 		.strip_name_prefix(MOCK_FN_PREFIX)
+		.assimilate_trait_prefix()
 		.append_type_signature::<I, O>();
 
-	Map::insert(location.hash::<Blake2_128>(), storage::register_call(f));
+	Map::insert(
+		location.hash::<Blake2_128>(TraitInfo::Whatever),
+		storage::register_call(f),
+	);
 }
 
 /// Execute a function from the function storage.
@@ -314,7 +318,8 @@ where
 		.normalize()
 		.append_type_signature::<I, O>();
 
-	let call_id = Map::try_get(location.hash::<Blake2_128>())
+	let call_id = Map::try_get(location.hash::<Blake2_128>(TraitInfo::Yes))
+		.or_else(|_| Map::try_get(location.hash::<Blake2_128>(TraitInfo::No)))
 		.unwrap_or_else(|_| panic!("Mock was not found. Location: {location:?}"));
 
 	storage::execute_call(call_id, input).unwrap_or_else(|err| {
