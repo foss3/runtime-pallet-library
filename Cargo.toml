@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "mock-builder",
+  "mock-builder",
 ]
 resolver = "2"
 

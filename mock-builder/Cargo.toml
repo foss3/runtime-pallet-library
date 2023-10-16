@@ -15,11 +15,11 @@ frame-support = { workspace = true }
 
 [dev-dependencies]
 codec = { package = "parity-scale-codec", workspace = true, features = ["default"] }
-frame-system = { workspace = true, features = ["default"]  }
-scale-info = { workspace = true, features = ["default"]  }
-sp-core = { workspace = true, features = ["default"]  }
-sp-io = { workspace = true, features = ["default"]  }
-sp-runtime = { workspace = true, features = ["default"]  }
+frame-system = { workspace = true, features = ["default"] }
+scale-info = { workspace = true, features = ["default"] }
+sp-core = { workspace = true, features = ["default"] }
+sp-io = { workspace = true, features = ["default"] }
+sp-runtime = { workspace = true, features = ["default"] }
 
 [features]
 default = ["std"]
