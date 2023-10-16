@@ -1,6 +1,7 @@
 pub trait TraitA {
 	fn foo(p1: String, p2: Option<u64>);
 	fn bar(p1: u64, p2: bool) -> Result<(), String>;
+	fn same_name(p1: bool, p2: i32) -> usize;
 }
 
 pub trait TraitB {
@@ -8,6 +9,7 @@ pub trait TraitB {
 	fn generic_input<A: Into<i32>>(a: A, b: impl Into<u32>) -> usize;
 	fn generic_output<A: Into<i32>>() -> A;
 	fn reference(a: &i32) -> &i32;
+	fn same_name(p1: i32) -> bool;
 }
 
 pub trait Storage {
@@ -67,6 +69,16 @@ pub mod pallet_mock_test {
 		pub fn mock_get(f: impl Fn() -> i32 + 'static) {
 			register_call!(move |()| f());
 		}
+
+		#[allow(non_snake_case)]
+		pub fn mock_TraitA_same_name(f: impl Fn(bool, i32) -> usize + 'static) {
+			register_call!(move |(a, b)| f(a, b));
+		}
+
+		#[allow(non_snake_case)]
+		pub fn mock_TraitB_same_name(f: impl Fn(i32) -> bool + 'static) {
+			register_call!(f);
+		}
 	}
 
 	impl<T: Config> super::TraitA for Pallet<T> {
@@ -75,6 +87,10 @@ pub mod pallet_mock_test {
 		}
 
 		fn bar(a: u64, b: bool) -> Result<(), String> {
+			execute_call!((a, b))
+		}
+
+		fn same_name(a: bool, b: i32) -> usize {
 			execute_call!((a, b))
 		}
 	}
@@ -93,6 +109,10 @@ pub mod pallet_mock_test {
 		}
 
 		fn reference(a: &i32) -> &i32 {
+			execute_call!(a)
+		}
+
+		fn same_name(a: i32) -> bool {
 			execute_call!(a)
 		}
 	}
@@ -199,10 +219,19 @@ mod mock {
 mod test {
 	use frame_support::assert_ok;
 
-	use super::{mock::*, Storage, TraitB};
+	use super::{mock::*, Storage, TraitA, TraitB};
 
 	#[test]
-	fn correct() {
+	fn basic() {
+		new_test_ext().execute_with(|| {
+			MockTest::mock_qux(|p1| &p1 == "hello");
+
+			assert_eq!(MockTest::qux("hello".into()), true);
+		});
+	}
+
+	#[test]
+	fn correct_flow() {
 		new_test_ext().execute_with(|| {
 			MockTest::mock_foo(|p1, _| assert_eq!("hello", &p1));
 			MockTest::mock_qux(|p1| &p1 == "hello");
@@ -236,7 +265,7 @@ mod test {
 	#[test]
 	#[should_panic]
 	fn previous_mock_data_is_destroyed() {
-		correct();
+		correct_flow();
 		// The storage is dropped at this time. Mocks no longer found from here.
 		mock_not_configured();
 	}
@@ -304,6 +333,24 @@ mod test {
 
 			MockTest::set(42);
 			assert_eq!(MockTest::get(), 42);
+		});
+	}
+
+	#[test]
+	fn method_with_same_name() {
+		new_test_ext().execute_with(|| {
+			MockTest::mock_TraitA_same_name(|a, b| {
+				assert_eq!(a, true);
+				assert_eq!(b, 42);
+				23
+			});
+			MockTest::mock_TraitB_same_name(|a| {
+				assert_eq!(a, 23);
+				true
+			});
+
+			assert_eq!(<MockTest as TraitA>::same_name(true, 42), 23);
+			assert_eq!(<MockTest as TraitB>::same_name(23), true);
 		});
 	}
 }
