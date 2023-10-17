@@ -1,0 +1,43 @@
+name: Rustdoc
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  docs:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: "-D warnings"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust toolchain
+        run: |
+          TOOLCHAIN_VERSION=$(grep 'channel =' rust-toolchain.toml | awk -F'"' '{print $2}')
+          rustup toolchain install "$TOOLCHAIN_VERSION"
+
+      - name: Build Documentation
+        id: build_docs
+        uses: actions-rs/cargo@v1
+        env:
+          RUSTDOCFLAGS: --enable-index-page -Z unstable-options
+        with:
+          command: doc
+          args: --all --no-deps
+
+      - name: Build Documentation failed
+        if: always() && steps.build_docs.outcome == 'failure'
+        run: echo ":::error::cargo doc --all --no-deps failed"
+        # Job will stop here and the check will be red if Build documentation failed
+
+      - name: Deploy Docs
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./target/doc
+          force_orphan: true
