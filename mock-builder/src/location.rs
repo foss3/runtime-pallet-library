@@ -263,7 +263,7 @@ mod tests {
 			Example::mock_method().strip_name_prefix("mock_"),
 			FunctionLocation {
 				location: format!("{PREFIX}::Example::method"),
-				trait_info: None,
+				trait_info: None
 			}
 		);
 	}
@@ -276,7 +276,7 @@ mod tests {
 				.assimilate_trait_prefix(),
 			FunctionLocation {
 				location: format!("{PREFIX}::Example::method"),
-				trait_info: None,
+				trait_info: None
 			}
 		);
 
