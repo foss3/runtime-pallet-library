@@ -15,7 +15,7 @@ General purpose utilities and pallets for [_Substrate_](https://substrate.io/).
 
 None so far.
 
-## Projects using RPL
+## Projects using RPL (Runtime Pallet Library)
 
 If you intend using RPL, please [add your project to the list below](https://github.com/foss3/runtime-pallet-library/edit/main/README.md):
 
