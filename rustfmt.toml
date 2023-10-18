@@ -5,3 +5,4 @@ reorder_imports = true
 group_imports = "StdExternalCrate"
 reorder_modules = true
 wrap_comments = true
+edition = "2021"
