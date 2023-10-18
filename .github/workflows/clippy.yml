@@ -21,4 +21,4 @@ jobs:
         rustup toolchain install "$TOOLCHAIN_VERSION"
 
     - name: Run clippy
-      run: cargo clippy -- -D warnings
+      run: cargo clippy --all-features -- -D warnings
