@@ -1,3 +1,4 @@
+name: Lints
 on:
   pull_request:
     branches:
