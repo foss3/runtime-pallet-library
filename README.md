@@ -1,4 +1,4 @@
-# Runtime Pallet Library
+# Runtime Pallet Library (RPL)
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Documentation](https://img.shields.io/badge/Rust_Docs-RPL-24CC85?logo=rust)](https://foss3.github.io/runtime-pallet-library/)
