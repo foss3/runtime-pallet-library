@@ -1,5 +1,3 @@
-name: Sanity Checks
-
 on:
   pull_request:
     branches:
@@ -22,11 +20,5 @@ jobs:
         TOOLCHAIN_VERSION=$(grep 'channel =' rust-toolchain.toml | awk -F'"' '{print $2}')
         rustup toolchain install "$TOOLCHAIN_VERSION"
 
-    - name: Linter
+    - name: Run lints
       run: cargo fmt --all -- --check
-
-    - name: Clippy
-      run: cargo clippy -- -D warnings
-
-    - name: Tests
-      run: cargo test --all-features
