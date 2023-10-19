@@ -240,7 +240,7 @@
 //!
 //! ## Mock Patterns
 //!
-//! ### Storage pattern
+//! #### Storage pattern
 //! In some cases it's pretty common making a mock that returns a value that was
 //! set previously by another mock. For this case you can define your "getter"
 //! mock inside the definition of the "setter" mock, as follows:
@@ -251,7 +251,7 @@
 //!
 //! Any call to `get()` will return the last value given to `set()`.
 //!
-//! ### Check internal calls are ordered
+//! #### Check internal calls are ordered
 //! If you want to test some mocks method are calle in some order, you can
 //! define them nested, in the expected order they must be called
 //!
