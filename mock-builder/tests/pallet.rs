@@ -151,22 +151,12 @@ pub mod my_pallet {
 mod mock {
 	use frame_support::traits::{ConstU16, ConstU32, ConstU64};
 	use sp_core::H256;
-	use sp_runtime::{
-		testing::Header,
-		traits::{BlakeTwo256, IdentityLookup},
-	};
+	use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 
 	use super::{my_pallet, pallet_mock_test};
 
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-	type Block = frame_system::mocking::MockBlock<Runtime>;
-
 	frame_support::construct_runtime!(
-		pub enum Runtime where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
+		pub struct Runtime {
 			System: frame_system,
 			MockTest: pallet_mock_test,
 			MyPallet: my_pallet,
@@ -177,17 +167,16 @@ mod mock {
 		type AccountData = ();
 		type AccountId = u64;
 		type BaseCallFilter = frame_support::traits::Everything;
+		type Block = frame_system::mocking::MockBlock<Runtime>;
 		type BlockHashCount = ConstU64<250>;
 		type BlockLength = ();
-		type BlockNumber = u64;
 		type BlockWeights = ();
 		type DbWeight = ();
 		type Hash = H256;
 		type Hashing = BlakeTwo256;
-		type Header = Header;
-		type Index = u64;
 		type Lookup = IdentityLookup<Self::AccountId>;
 		type MaxConsumers = ConstU32<16>;
+		type Nonce = u64;
 		type OnKilledAccount = ();
 		type OnNewAccount = ();
 		type OnSetCode = ();
@@ -207,10 +196,7 @@ mod mock {
 	}
 
 	pub fn new_test_ext() -> sp_io::TestExternalities {
-		frame_system::GenesisConfig::default()
-			.build_storage::<Runtime>()
-			.unwrap()
-			.into()
+		sp_io::TestExternalities::new(Default::default())
 	}
 }
 
