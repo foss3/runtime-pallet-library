@@ -240,7 +240,7 @@
 //!
 //! ## Mock Patterns
 //!
-//! ### Storage pattern
+//! ### Storage pattern
 //! In some cases it's pretty common making a mock that returns a value that was
 //! set previously by another mock. For this case you can define your "getter"
 //! mock inside the definition of the "setter" mock, as follows:
