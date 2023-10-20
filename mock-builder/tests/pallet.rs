@@ -17,7 +17,7 @@ pub trait Storage {
 	fn get() -> i32;
 }
 
-#[frame_support::pallet]
+#[frame_support::pallet(dev_mode)]
 pub mod pallet_mock_test {
 	use frame_support::pallet_prelude::*;
 	use mock_builder::{execute_call, register_call};
@@ -29,12 +29,7 @@ pub mod pallet_mock_test {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	pub(super) type CallIds<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		<Blake2_128 as frame_support::StorageHasher>::Output,
-		mock_builder::CallId,
-	>;
+	pub(super) type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
 
 	impl<T: Config> Pallet<T> {
 		pub fn mock_foo(f: impl Fn(String, Option<u64>) + 'static) {
