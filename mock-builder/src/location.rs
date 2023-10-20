@@ -1,5 +1,3 @@
-use frame_support::StorageHasher;
-
 use super::util::TypeSignature;
 
 /// Indicate how to perform the localtion hash
@@ -129,23 +127,14 @@ impl FunctionLocation {
 	}
 
 	/// Generate a hash of the location
-	pub fn hash<Hasher: StorageHasher>(&self, trait_info: TraitInfo) -> Hasher::Output {
-		let string = match trait_info {
-			TraitInfo::Yes => {
-				let trait_info = self
-					.trait_info
-					.as_ref()
-					.expect("Location must have trait info");
-				format!("{}{}", self.location, trait_info)
-			}
-			TraitInfo::No => self.location.clone(),
-			TraitInfo::Whatever => {
-				let trait_info = self.trait_info.clone().unwrap_or_default();
-				format!("{}{}", self.location, trait_info)
-			}
+	pub fn get(&self, trait_info: TraitInfo) -> String {
+		let trait_info = match trait_info {
+			TraitInfo::Yes => self.trait_info.clone().unwrap(),
+			TraitInfo::No => String::default(),
+			TraitInfo::Whatever => self.trait_info.clone().unwrap_or_default(),
 		};
 
-		Hasher::hash(string.as_bytes())
+		format!("{},trait={}", self.location, trait_info)
 	}
 }
 

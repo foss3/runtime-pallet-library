@@ -144,7 +144,7 @@
 //! the pallet (it's safe to just copy and paste this snippet in your pallet):
 //!
 //! ```no_run
-//! # #[frame_support::pallet]
+//! # #[frame_support::pallet(dev_mode)]
 //! # mod pallet {
 //! # use frame_support::pallet_prelude::*;
 //! # #[pallet::config]
@@ -153,12 +153,7 @@
 //! # pub struct Pallet<T>(_);
 //!
 //! #[pallet::storage]
-//! pub(super) type CallIds<T: Config> = StorageMap<
-//!     _,
-//!     Blake2_128Concat,
-//!     <Blake2_128 as frame_support::StorageHasher>::Output,
-//!     mock_builder::CallId,
-//! >;
+//! pub(super) type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
 //!
 //! # }
 //! ```
@@ -167,7 +162,7 @@
 //! and `TraitB` is done as follows:
 //!
 //! ```no_run
-//! #[frame_support::pallet]
+//! #[frame_support::pallet(dev_mode)]
 //! pub mod pallet {
 //!     # trait TraitA {
 //!     #     type AssocA;
@@ -194,12 +189,7 @@
 //!     pub struct Pallet<T>(_);
 //!
 //!     #[pallet::storage]
-//!     pub(super) type CallIds<T: Config> = StorageMap<
-//!         _,
-//!         Blake2_128Concat,
-//!         <Blake2_128 as frame_support::StorageHasher>::Output,
-//!         mock_builder::CallId,
-//!     >;
+//!     pub(super) type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
 //!
 //!     impl<T: Config> Pallet<T> {
 //!         fn mock_foo(f: impl Fn() -> T::AssocA + 'static) {
@@ -272,7 +262,7 @@ pub mod location;
 
 mod util;
 
-use frame_support::{Blake2_128, StorageHasher, StorageMap};
+use frame_support::StorageMap;
 use location::{FunctionLocation, TraitInfo};
 pub use storage::CallId;
 
@@ -284,7 +274,7 @@ pub const MOCK_FN_PREFIX: &str = "mock_";
 /// identification.
 pub fn register<Map, L, F, I, O>(locator: L, f: F)
 where
-	Map: StorageMap<<Blake2_128 as StorageHasher>::Output, CallId>,
+	Map: StorageMap<String, CallId>,
 	L: Fn(),
 	F: Fn(I) -> O + 'static,
 {
@@ -294,10 +284,7 @@ where
 		.assimilate_trait_prefix()
 		.append_type_signature::<I, O>();
 
-	Map::insert(
-		location.hash::<Blake2_128>(TraitInfo::Whatever),
-		storage::register_call(f),
-	);
+	Map::insert(location.get(TraitInfo::Whatever), storage::register_call(f));
 }
 
 /// Execute a function from the function storage.
@@ -305,15 +292,15 @@ where
 /// identification.
 pub fn execute<Map, L, I, O>(locator: L, input: I) -> O
 where
-	Map: StorageMap<<Blake2_128 as StorageHasher>::Output, CallId>,
+	Map: StorageMap<String, CallId>,
 	L: Fn(),
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
 		.append_type_signature::<I, O>();
 
-	let call_id = Map::try_get(location.hash::<Blake2_128>(TraitInfo::Yes))
-		.or_else(|_| Map::try_get(location.hash::<Blake2_128>(TraitInfo::No)))
+	let call_id = Map::try_get(location.get(TraitInfo::Yes))
+		.or_else(|_| Map::try_get(location.get(TraitInfo::No)))
 		.unwrap_or_else(|_| panic!("Mock was not found. Location: {location:?}"));
 
 	storage::execute_call(call_id, input).unwrap_or_else(|err| {
