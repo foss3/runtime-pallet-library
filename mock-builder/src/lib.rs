@@ -262,7 +262,6 @@ pub mod location;
 
 mod util;
 
-use frame_support::StorageMap;
 use location::{FunctionLocation, TraitInfo};
 pub use storage::CallId;
 
@@ -272,10 +271,9 @@ pub const MOCK_FN_PREFIX: &str = "mock_";
 /// Register a mock function into the mock function storage.
 /// This function should be called with a locator used as a function
 /// identification.
-pub fn register<Map, L, F, I, O>(locator: L, f: F)
+pub fn register<Locator, F, I, O>(locator: Locator, f: F) -> (String, CallId)
 where
-	Map: StorageMap<String, CallId>,
-	L: Fn(),
+	Locator: Fn(),
 	F: Fn(I) -> O + 'static,
 {
 	let location = FunctionLocation::from(locator)
@@ -284,24 +282,23 @@ where
 		.assimilate_trait_prefix()
 		.append_type_signature::<I, O>();
 
-	Map::insert(location.get(TraitInfo::Whatever), storage::register_call(f));
+	(location.get(TraitInfo::Whatever), storage::register_call(f))
 }
 
 /// Execute a function from the function storage.
 /// This function should be called with a locator used as a function
 /// identification.
-pub fn execute<Map, L, I, O>(locator: L, input: I) -> O
+pub fn execute<Locator, I, O, Getter>(locator: Locator, input: I, getter: Getter) -> O
 where
-	Map: StorageMap<String, CallId>,
-	L: Fn(),
+	Locator: Fn(),
+	Getter: Fn(String, String) -> Option<CallId>,
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
 		.append_type_signature::<I, O>();
 
-	let call_id = Map::try_get(location.get(TraitInfo::Yes))
-		.or_else(|_| Map::try_get(location.get(TraitInfo::No)))
-		.unwrap_or_else(|_| panic!("Mock was not found. Location: {location:?}"));
+	let call_id = getter(location.get(TraitInfo::Yes), location.get(TraitInfo::No))
+		.unwrap_or_else(|| panic!("Mock was not found. Location: {location:?}"));
 
 	storage::execute_call(call_id, input).unwrap_or_else(|err| {
 		panic!("{err}. Location: {location:?}");
@@ -313,7 +310,8 @@ where
 #[macro_export]
 macro_rules! register_call {
 	($f:expr) => {{
-		$crate::register::<CallIds<T>, _, _, _, _>(|| (), $f)
+		let (location, call_id) = $crate::register(|| (), $f);
+		CallIds::<T>::insert(location, call_id);
 	}};
 }
 
@@ -322,7 +320,8 @@ macro_rules! register_call {
 #[macro_export]
 macro_rules! register_call_instance {
 	($f:expr) => {{
-		$crate::register::<CallIds<T, I>, _, _, _, _>(|| (), $f)
+		let (location, call_id) = $crate::register(|| (), $f);
+		CallIds::<T, I>::insert(location, call_id);
 	}};
 }
 
@@ -331,7 +330,14 @@ macro_rules! register_call_instance {
 #[macro_export]
 macro_rules! execute_call {
 	($input:expr) => {{
-		$crate::execute::<CallIds<T>, _, _, _>(|| (), $input)
+		$crate::execute(
+			|| (),
+			$input,
+			|location_with_trait, location_without_trait| {
+				CallIds::<T>::get(location_with_trait)
+					.or_else(|| CallIds::<T>::get(location_without_trait))
+			},
+		)
 	}};
 }
 
@@ -340,6 +346,13 @@ macro_rules! execute_call {
 #[macro_export]
 macro_rules! execute_call_instance {
 	($input:expr) => {{
-		$crate::execute::<CallIds<T, I>, _, _, _>(|| (), $input)
+		$crate::execute(
+			|| (),
+			$input,
+			|location_with_trait, location_without_trait| {
+				CallIds::<T, I>::get(location_with_trait)
+					.or_else(|| CallIds::<T, I>::get(location_without_trait))
+			},
+		)
 	}};
 }

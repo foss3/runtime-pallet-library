@@ -10,11 +10,9 @@ version = "0.2.0"
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
-[dependencies]
-frame-support = { workspace = true }
-
 [dev-dependencies]
 codec = { package = "parity-scale-codec", workspace = true, features = ["default"] }
+frame-support = { workspace = true features = ["default"] }
 frame-system = { workspace = true, features = ["default"] }
 scale-info = { workspace = true, features = ["default"] }
 sp-core = { workspace = true, features = ["default"] }
