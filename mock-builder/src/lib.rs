@@ -271,11 +271,11 @@ pub const MOCK_FN_PREFIX: &str = "mock_";
 /// Register a mock function into the mock function storage.
 /// This function should be called with a locator used as a function
 /// identification.
-pub fn register<Locator, F, I, O, Setter>(locator: Locator, f: F, setter: Setter)
+pub fn register<Locator, F, I, O, Insert>(locator: Locator, f: F, insert: Insert)
 where
 	Locator: Fn(),
 	F: Fn(I) -> O + 'static,
-	Setter: Fn(String, CallId),
+	Insert: Fn(String, CallId),
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
@@ -283,23 +283,23 @@ where
 		.assimilate_trait_prefix()
 		.append_type_signature::<I, O>();
 
-	setter(location.get(TraitInfo::Whatever), storage::register_call(f))
+	insert(location.get(TraitInfo::Whatever), storage::register_call(f))
 }
 
 /// Execute a function from the function storage.
 /// This function should be called with a locator used as a function
 /// identification.
-pub fn execute<Locator, I, O, Getter>(locator: Locator, input: I, getter: Getter) -> O
+pub fn execute<Locator, I, O, Get>(locator: Locator, input: I, get: Get) -> O
 where
 	Locator: Fn(),
-	Getter: Fn(String) -> Option<CallId>,
+	Get: Fn(String) -> Option<CallId>,
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
 		.append_type_signature::<I, O>();
 
-	let call_id = getter(location.get(TraitInfo::Yes))
-		.or_else(|| getter(location.get(TraitInfo::No)))
+	let call_id = get(location.get(TraitInfo::Yes))
+		.or_else(|| get(location.get(TraitInfo::No)))
 		.unwrap_or_else(|| panic!("Mock was not found. Location: {location:?}"));
 
 	storage::execute_call(call_id, input).unwrap_or_else(|err| {
