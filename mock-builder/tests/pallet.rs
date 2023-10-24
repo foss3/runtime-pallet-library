@@ -29,7 +29,7 @@ pub mod pallet_mock_test {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	pub(super) type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
+	type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
 
 	impl<T: Config> Pallet<T> {
 		pub fn mock_foo(f: impl Fn(String, Option<u64>) + 'static) {

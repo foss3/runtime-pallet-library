@@ -57,7 +57,7 @@
 //! associated type in our `Config`, which implements traits `TraitA` and
 //! `TraitB`. Those traits are defined as follows:
 //!
-//! ```no_run
+//! ```
 //! trait TraitA {
 //!     type AssocA;
 //!
@@ -143,7 +143,7 @@
 //! The only condition to use these macros is to have the following storage in
 //! the pallet (it's safe to just copy and paste this snippet in your pallet):
 //!
-//! ```no_run
+//! ```
 //! # #[frame_support::pallet(dev_mode)]
 //! # mod pallet {
 //! # use frame_support::pallet_prelude::*;
@@ -153,7 +153,7 @@
 //! # pub struct Pallet<T>(_);
 //!
 //! #[pallet::storage]
-//! pub(super) type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
+//! type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
 //!
 //! # }
 //! ```
@@ -161,7 +161,7 @@
 //! Following the above example, generating a *mock pallet* for both `TraitA`
 //! and `TraitB` is done as follows:
 //!
-//! ```no_run
+//! ```
 //! #[frame_support::pallet(dev_mode)]
 //! pub mod pallet {
 //!     # trait TraitA {
@@ -189,7 +189,7 @@
 //!     pub struct Pallet<T>(_);
 //!
 //!     #[pallet::storage]
-//!     pub(super) type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
+//!     type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
 //!
 //!     impl<T: Config> Pallet<T> {
 //!         fn mock_foo(f: impl Fn() -> T::AssocA + 'static) {
@@ -262,7 +262,6 @@ pub mod location;
 
 mod util;
 
-use frame_support::StorageMap;
 use location::{FunctionLocation, TraitInfo};
 pub use storage::CallId;
 
@@ -272,11 +271,11 @@ pub const MOCK_FN_PREFIX: &str = "mock_";
 /// Register a mock function into the mock function storage.
 /// This function should be called with a locator used as a function
 /// identification.
-pub fn register<Map, L, F, I, O>(locator: L, f: F)
+pub fn register<Locator, F, I, O, Insert>(locator: Locator, f: F, insert: Insert)
 where
-	Map: StorageMap<String, CallId>,
-	L: Fn(),
+	Locator: Fn(),
 	F: Fn(I) -> O + 'static,
+	Insert: Fn(String, CallId),
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
@@ -284,24 +283,24 @@ where
 		.assimilate_trait_prefix()
 		.append_type_signature::<I, O>();
 
-	Map::insert(location.get(TraitInfo::Whatever), storage::register_call(f));
+	insert(location.get(TraitInfo::Whatever), storage::register_call(f))
 }
 
 /// Execute a function from the function storage.
 /// This function should be called with a locator used as a function
 /// identification.
-pub fn execute<Map, L, I, O>(locator: L, input: I) -> O
+pub fn execute<Locator, I, O, Get>(locator: Locator, input: I, get: Get) -> O
 where
-	Map: StorageMap<String, CallId>,
-	L: Fn(),
+	Locator: Fn(),
+	Get: Fn(String) -> Option<CallId>,
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
 		.append_type_signature::<I, O>();
 
-	let call_id = Map::try_get(location.get(TraitInfo::Yes))
-		.or_else(|_| Map::try_get(location.get(TraitInfo::No)))
-		.unwrap_or_else(|_| panic!("Mock was not found. Location: {location:?}"));
+	let call_id = get(location.get(TraitInfo::Yes))
+		.or_else(|| get(location.get(TraitInfo::No)))
+		.unwrap_or_else(|| panic!("Mock was not found. Location: {location:?}"));
 
 	storage::execute_call(call_id, input).unwrap_or_else(|err| {
 		panic!("{err}. Location: {location:?}");
@@ -313,7 +312,7 @@ where
 #[macro_export]
 macro_rules! register_call {
 	($f:expr) => {{
-		$crate::register::<CallIds<T>, _, _, _, _>(|| (), $f)
+		$crate::register(|| (), $f, CallIds::<T>::insert);
 	}};
 }
 
@@ -322,7 +321,7 @@ macro_rules! register_call {
 #[macro_export]
 macro_rules! register_call_instance {
 	($f:expr) => {{
-		$crate::register::<CallIds<T, I>, _, _, _, _>(|| (), $f)
+		$crate::register(|| (), $f, CallIds::<T, I>::insert);
 	}};
 }
 
@@ -331,7 +330,7 @@ macro_rules! register_call_instance {
 #[macro_export]
 macro_rules! execute_call {
 	($input:expr) => {{
-		$crate::execute::<CallIds<T>, _, _, _>(|| (), $input)
+		$crate::execute(|| (), $input, CallIds::<T>::get)
 	}};
 }
 
@@ -340,6 +339,6 @@ macro_rules! execute_call {
 #[macro_export]
 macro_rules! execute_call_instance {
 	($input:expr) => {{
-		$crate::execute::<CallIds<T, I>, _, _, _>(|| (), $input)
+		$crate::execute(|| (), $input, CallIds::<T, I>::get)
 	}};
 }
