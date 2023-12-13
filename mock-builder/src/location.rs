@@ -62,23 +62,17 @@ impl FunctionLocation {
 		let (path, name) = self.location.rsplit_once("::").expect("always '::'");
 		let (path, trait_info) = match path.strip_prefix('<') {
 			Some(struct_as_trait_path) => {
-				let struct_path = struct_as_trait_path
+				let (struct_path, trait_path) = struct_as_trait_path
 					.split_once(" as")
-					.expect("always ' as'")
-					.0;
+					.expect("always ' as'");
 
-				let trait_name = struct_as_trait_path
-					.rsplit_once("::")
-					.expect("always '::'")
-					.1
-					.strip_suffix('>')
-					.unwrap();
-
-				// Remove generic from trait name
-				let trait_name = trait_name
+				let trait_name = trait_path
 					.split_once('<')
-					.map(|(fst, _)| fst)
-					.unwrap_or(trait_name);
+					.map(|(name, _generics)| name)
+					.unwrap_or(trait_path.strip_suffix('>').unwrap())
+					.rsplit_once("::")
+					.expect("Always '::'")
+					.1;
 
 				(struct_path, Some(trait_name.to_owned()))
 			}
@@ -167,12 +161,16 @@ mod tests {
 	}
 
 	trait TraitExampleGen<G1, G2> {
-		fn foo() -> FunctionLocation;
+		fn generic() -> FunctionLocation;
 	}
 
-	struct Example;
+	trait Config {
+		type Assoc;
+	}
 
-	impl Example {
+	struct Example<T>(core::marker::PhantomData<T>);
+
+	impl<T> Example<T> {
 		fn mock_method() -> FunctionLocation {
 			FunctionLocation::from(|| ())
 		}
@@ -182,12 +180,17 @@ mod tests {
 			FunctionLocation::from(|| ())
 		}
 
+		#[allow(non_snake_case)]
+		fn mock_TraitExampleGen_generic() -> FunctionLocation {
+			FunctionLocation::from(|| ())
+		}
+
 		fn mock_generic_method<A: Into<i32>>(_: impl Into<u32>) -> FunctionLocation {
 			FunctionLocation::from(|| ())
 		}
 	}
 
-	impl TraitExample for Example {
+	impl<T> TraitExample for Example<T> {
 		fn method() -> FunctionLocation {
 			FunctionLocation::from(|| ())
 		}
@@ -197,59 +200,68 @@ mod tests {
 		}
 	}
 
-	impl TraitExampleGen<u32, bool> for Example {
-		fn foo() -> FunctionLocation {
+	impl<T: Config> TraitExampleGen<T::Assoc, bool> for Example<T> {
+		fn generic() -> FunctionLocation {
 			FunctionLocation::from(|| ())
 		}
+	}
+
+	struct TestConfig;
+	impl Config for TestConfig {
+		type Assoc = u32;
 	}
 
 	#[test]
 	fn function_location() {
 		assert_eq!(
-			Example::mock_method(),
+			Example::<TestConfig>::mock_method(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::mock_method"),
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::mock_method"),
 				trait_info: None,
 			}
 		);
 
 		assert_eq!(
-			Example::mock_TraitExample_method(),
-			FunctionLocation {
-				location: format!("{PREFIX}::Example::mock_TraitExample_method"),
-				trait_info: None,
-			}
-		);
-
-		assert_eq!(
-			Example::mock_generic_method::<i8>(0u8),
-			FunctionLocation {
-				location: format!("{PREFIX}::Example::mock_generic_method"),
-				trait_info: None,
-			}
-		);
-
-		assert_eq!(
-			Example::method(),
-			FunctionLocation {
-				location: format!("<{PREFIX}::Example as {PREFIX}::TraitExample>::method"),
-				trait_info: None,
-			}
-		);
-
-		assert_eq!(
-			Example::generic_method::<i8>(0u8),
-			FunctionLocation {
-				location: format!("<{PREFIX}::Example as {PREFIX}::TraitExample>::generic_method"),
-				trait_info: None,
-			}
-		);
-
-		assert_eq!(
-			Example::foo(),
+			Example::<TestConfig>::mock_TraitExample_method(),
 			FunctionLocation {
 				location: format!(
-					"<{PREFIX}::Example as {PREFIX}::TraitExampleGen<u32, bool>>::foo"
+					"{PREFIX}::Example<{PREFIX}::TestConfig>::mock_TraitExample_method"
+				),
+				trait_info: None,
+			}
+		);
+
+		assert_eq!(
+			Example::<TestConfig>::mock_generic_method::<i8>(0u8),
+			FunctionLocation {
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::mock_generic_method"),
+				trait_info: None,
+			}
+		);
+
+		assert_eq!(
+			Example::<TestConfig>::method(),
+			FunctionLocation {
+				location: format!(
+					"<{PREFIX}::Example<{PREFIX}::TestConfig> as {PREFIX}::TraitExample>::method"
+				),
+				trait_info: None,
+			}
+		);
+
+		assert_eq!(
+			Example::<TestConfig>::generic_method::<i8>(0u8),
+			FunctionLocation {
+				location: format!("<{PREFIX}::Example<{PREFIX}::TestConfig> as {PREFIX}::TraitExample>::generic_method"),
+				trait_info: None,
+			}
+		);
+
+		assert_eq!(
+			Example::<TestConfig>::generic(),
+			FunctionLocation {
+				location: format!(
+					"<{PREFIX}::Example<{PREFIX}::TestConfig> as {PREFIX}::TraitExampleGen<<{PREFIX}::TestConfig as {PREFIX}::Config>::Assoc, bool>>::generic"
 				),
 				trait_info: None,
 			}
@@ -259,33 +271,35 @@ mod tests {
 	#[test]
 	fn normalized() {
 		assert_eq!(
-			Example::mock_method().normalize(),
+			Example::<TestConfig>::mock_method().normalize(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::mock_method"),
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::mock_method"),
 				trait_info: None,
 			}
 		);
 
 		assert_eq!(
-			Example::mock_TraitExample_method().normalize(),
+			Example::<TestConfig>::mock_TraitExample_method().normalize(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::mock_TraitExample_method"),
+				location: format!(
+					"{PREFIX}::Example<{PREFIX}::TestConfig>::mock_TraitExample_method"
+				),
 				trait_info: None,
 			}
 		);
 
 		assert_eq!(
-			Example::method().normalize(),
+			Example::<TestConfig>::method().normalize(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::method"),
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::method"),
 				trait_info: Some("TraitExample".into()),
 			}
 		);
 
 		assert_eq!(
-			Example::foo().normalize(),
+			Example::<TestConfig>::generic().normalize(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::foo"),
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::generic"),
 				trait_info: Some("TraitExampleGen".into()),
 			}
 		);
@@ -294,9 +308,9 @@ mod tests {
 	#[test]
 	fn striped_name_prefix() {
 		assert_eq!(
-			Example::mock_method().strip_name_prefix("mock_"),
+			Example::<TestConfig>::mock_method().strip_name_prefix("mock_"),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::method"),
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::method"),
 				trait_info: None,
 			}
 		);
@@ -305,22 +319,32 @@ mod tests {
 	#[test]
 	fn assimilated_trait_prefix() {
 		assert_eq!(
-			Example::mock_method()
+			Example::<TestConfig>::mock_method()
 				.strip_name_prefix("mock_")
 				.assimilate_trait_prefix(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::method"),
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::method"),
 				trait_info: None,
 			}
 		);
 
 		assert_eq!(
-			Example::mock_TraitExample_method()
+			Example::<TestConfig>::mock_TraitExample_method()
 				.strip_name_prefix("mock_")
 				.assimilate_trait_prefix(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::method"),
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::method"),
 				trait_info: Some("TraitExample".into()),
+			}
+		);
+
+		assert_eq!(
+			Example::<TestConfig>::mock_TraitExampleGen_generic()
+				.strip_name_prefix("mock_")
+				.assimilate_trait_prefix(),
+			FunctionLocation {
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::generic"),
+				trait_info: Some("TraitExampleGen".into()),
 			}
 		);
 	}
@@ -328,9 +352,9 @@ mod tests {
 	#[test]
 	fn appended_type_signature() {
 		assert_eq!(
-			Example::mock_method().append_type_signature::<i8, u8>(),
+			Example::<TestConfig>::mock_method().append_type_signature::<i8, u8>(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::mock_method:i8->u8"),
+				location: format!("{PREFIX}::Example<{PREFIX}::TestConfig>::mock_method:i8->u8"),
 				trait_info: None,
 			}
 		);
