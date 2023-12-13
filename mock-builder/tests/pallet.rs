@@ -12,7 +12,7 @@ pub trait TraitB {
 	fn same_name(p1: i32) -> bool;
 }
 
-pub trait TraitGen<A, B> {
+pub trait TraitGen<A> {
 	fn generic() -> u32;
 }
 
@@ -120,7 +120,7 @@ pub mod pallet_mock_test {
 		}
 	}
 
-	impl<T: Config> super::TraitGen<u32, bool> for Pallet<T> {
+	impl<T: Config> super::TraitGen<T::AccountId> for Pallet<T> {
 		fn generic() -> u32 {
 			execute_call!(())
 		}
