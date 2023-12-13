@@ -72,6 +72,12 @@ impl FunctionLocation {
 					.strip_suffix('>')
 					.unwrap();
 
+				// Remove generic from trait name
+				let trait_name = trait_name
+					.split_once('<')
+					.map(|(fst, _)| fst)
+					.unwrap_or(trait_name);
+
 				(struct_path, Some(trait_name.to_owned()))
 			}
 			None => (path, None),
@@ -149,6 +155,10 @@ mod tests {
 		fn generic_method<A: Into<i32>>(_: impl Into<u32>) -> FunctionLocation;
 	}
 
+	trait TraitExampleGen<G1, G2> {
+		fn foo() -> FunctionLocation;
+	}
+
 	struct Example;
 
 	impl Example {
@@ -172,6 +182,12 @@ mod tests {
 		}
 
 		fn generic_method<A: Into<i32>>(_: impl Into<u32>) -> FunctionLocation {
+			FunctionLocation::from(|| ())
+		}
+	}
+
+	impl TraitExampleGen<u32, bool> for Example {
+		fn foo() -> FunctionLocation {
 			FunctionLocation::from(|| ())
 		}
 	}
@@ -217,6 +233,16 @@ mod tests {
 				trait_info: None,
 			}
 		);
+
+		assert_eq!(
+			Example::foo(),
+			FunctionLocation {
+				location: format!(
+					"<{PREFIX}::Example as {PREFIX}::TraitExampleGen<u32, bool>>::foo"
+				),
+				trait_info: None,
+			}
+		);
 	}
 
 	#[test]
@@ -242,6 +268,14 @@ mod tests {
 			FunctionLocation {
 				location: format!("{PREFIX}::Example::method"),
 				trait_info: Some("TraitExample".into()),
+			}
+		);
+
+		assert_eq!(
+			Example::foo().normalize(),
+			FunctionLocation {
+				location: format!("{PREFIX}::Example::foo"),
+				trait_info: Some("TraitExampleGen".into()),
 			}
 		);
 	}
