@@ -12,6 +12,10 @@ pub trait TraitB {
 	fn same_name(p1: i32) -> bool;
 }
 
+pub trait TraitGen<A, B> {
+	fn generic() -> u32;
+}
+
 pub trait Storage {
 	fn set(value: i32);
 	fn get() -> i32;
@@ -73,6 +77,11 @@ pub mod pallet_mock_test {
 		pub fn mock_TraitB_same_name(f: impl Fn(i32) -> bool + 'static) {
 			register_call!(f);
 		}
+
+		#[allow(non_snake_case)]
+		pub fn mock_TraitGen_generic(f: impl Fn() -> u32 + 'static) {
+			register_call!(move |()| f());
+		}
 	}
 
 	impl<T: Config> super::TraitA for Pallet<T> {
@@ -108,6 +117,12 @@ pub mod pallet_mock_test {
 
 		fn same_name(a: i32) -> bool {
 			execute_call!(a)
+		}
+	}
+
+	impl<T: Config> super::TraitGen<u32, bool> for Pallet<T> {
+		fn generic() -> u32 {
+			execute_call!(())
 		}
 	}
 
@@ -198,7 +213,7 @@ mod mock {
 mod test {
 	use frame_support::assert_ok;
 
-	use super::{mock::*, Storage, TraitA, TraitB};
+	use super::{mock::*, Storage, TraitA, TraitB, TraitGen};
 
 	#[test]
 	fn basic() {
@@ -330,6 +345,15 @@ mod test {
 
 			assert_eq!(<MockTest as TraitA>::same_name(true, 42), 23);
 			assert_eq!(<MockTest as TraitB>::same_name(23), true);
+		});
+	}
+
+	#[test]
+	fn method_from_generic_trait_long_path() {
+		new_test_ext().execute_with(|| {
+			MockTest::mock_TraitGen_generic(|| 23);
+
+			assert_eq!(MockTest::generic(), 23);
 		});
 	}
 }

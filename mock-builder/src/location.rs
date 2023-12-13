@@ -156,7 +156,7 @@ mod tests {
 	}
 
 	trait TraitExampleGen<G1, G2> {
-		fn foo() -> FunctionLocation;
+		fn generic() -> FunctionLocation;
 	}
 
 	struct Example;
@@ -168,6 +168,11 @@ mod tests {
 
 		#[allow(non_snake_case)]
 		fn mock_TraitExample_method() -> FunctionLocation {
+			FunctionLocation::from(|| ())
+		}
+
+		#[allow(non_snake_case)]
+		fn mock_TraitExampleGen_generic() -> FunctionLocation {
 			FunctionLocation::from(|| ())
 		}
 
@@ -187,7 +192,7 @@ mod tests {
 	}
 
 	impl TraitExampleGen<u32, bool> for Example {
-		fn foo() -> FunctionLocation {
+		fn generic() -> FunctionLocation {
 			FunctionLocation::from(|| ())
 		}
 	}
@@ -235,10 +240,10 @@ mod tests {
 		);
 
 		assert_eq!(
-			Example::foo(),
+			Example::generic(),
 			FunctionLocation {
 				location: format!(
-					"<{PREFIX}::Example as {PREFIX}::TraitExampleGen<u32, bool>>::foo"
+					"<{PREFIX}::Example as {PREFIX}::TraitExampleGen<u32, bool>>::generic"
 				),
 				trait_info: None,
 			}
@@ -272,9 +277,9 @@ mod tests {
 		);
 
 		assert_eq!(
-			Example::foo().normalize(),
+			Example::generic().normalize(),
 			FunctionLocation {
-				location: format!("{PREFIX}::Example::foo"),
+				location: format!("{PREFIX}::Example::generic"),
 				trait_info: Some("TraitExampleGen".into()),
 			}
 		);
@@ -310,6 +315,16 @@ mod tests {
 			FunctionLocation {
 				location: format!("{PREFIX}::Example::method"),
 				trait_info: Some("TraitExample".into()),
+			}
+		);
+
+		assert_eq!(
+			Example::mock_TraitExampleGen_generic()
+				.strip_name_prefix("mock_")
+				.assimilate_trait_prefix(),
+			FunctionLocation {
+				location: format!("{PREFIX}::Example::generic"),
+				trait_info: Some("TraitExampleGen".into()),
 			}
 		);
 	}
