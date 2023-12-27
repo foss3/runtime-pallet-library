@@ -8,4 +8,6 @@ General purpose utilities and pallets for [*Substrate*](https://substrate.io/)
 
 ## Pallets
 
+- [`pallet-remarks`](pallets/remarks): Add remarks to calls
+
 ...
