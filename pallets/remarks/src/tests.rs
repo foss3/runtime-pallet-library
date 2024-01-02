@@ -11,6 +11,7 @@
 // GNU General Public License for more details.
 use frame_support::{assert_noop, assert_ok, pallet_prelude::ConstU32, BoundedVec};
 use frame_system::Call as SystemCall;
+use pallet_utility::Call as UtilityCall;
 use sp_runtime::DispatchError::BadOrigin;
 
 use crate::{mock::*, *};
@@ -18,8 +19,8 @@ use crate::{mock::*, *};
 mod remark {
 	use super::*;
 
-	fn get_test_remarks() -> BoundedVec<TestRemark, MaxRemarks> {
-		BoundedVec::<TestRemark, MaxRemarks>::try_from(vec![
+	fn get_test_remarks() -> BoundedVec<TestRemark, MaxRemarksPerCall> {
+		BoundedVec::<TestRemark, MaxRemarksPerCall>::try_from(vec![
 			TestRemark::SomeId(1),
 			TestRemark::SomeId(2),
 			TestRemark::SomeBytes(
@@ -33,14 +34,39 @@ mod remark {
 	#[test]
 	fn success() {
 		new_test_ext().execute_with(|| {
+			let origin = RuntimeOrigin::signed(1);
 			let remarks = get_test_remarks();
 
 			let call = RuntimeCall::System(SystemCall::remark {
 				remark: vec![3, 4, 5],
 			});
 
+			let expected_pre_origin = origin.clone();
+			let expected_pre_remarks = remarks.clone();
+			let expected_pre_call = call.clone();
+
+			RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |t| {
+				assert_eq!(t.0.as_signed(), expected_pre_origin.clone().as_signed());
+				assert_eq!(t.1, expected_pre_remarks);
+				assert_eq!(t.2, Box::new(expected_pre_call.clone()));
+
+				Ok(())
+			});
+
+			let expected_post_origin = origin.clone();
+			let expected_post_remarks = remarks.clone();
+			let expected_post_call = call.clone();
+
+			RemarkDispatchHandlerMock::mock_post_dispatch_check(move |t| {
+				assert_eq!(t.0.as_signed(), expected_post_origin.clone().as_signed());
+				assert_eq!(t.1, expected_post_remarks);
+				assert_eq!(t.2, Box::new(expected_post_call.clone()));
+
+				Ok(())
+			});
+
 			assert_ok!(Remarks::remark(
-				RuntimeOrigin::signed(1),
+				origin.clone(),
 				remarks.clone(),
 				call.clone().into()
 			));
@@ -73,7 +99,57 @@ mod remark {
 	}
 
 	#[test]
-	fn nested_call_failure() {
+	fn pre_dispatch_failure() {
+		new_test_ext().execute_with(|| {
+			let remarks = get_test_remarks();
+
+			let call = RuntimeCall::System(SystemCall::remark {
+				remark: vec![3, 4, 5],
+			});
+
+			let expected_error = DispatchError::Other("pre-dispatch error");
+
+			RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |_t| Err(expected_error));
+
+			assert_noop!(
+				Remarks::remark(
+					RuntimeOrigin::signed(1),
+					remarks.clone(),
+					call.clone().into()
+				),
+				expected_error
+			);
+		});
+	}
+
+	#[test]
+	fn post_dispatch_failure() {
+		new_test_ext().execute_with(|| {
+			let remarks = get_test_remarks();
+
+			let call = RuntimeCall::System(SystemCall::remark {
+				remark: vec![3, 4, 5],
+			});
+
+			RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |_t| Ok(()));
+
+			let expected_error = DispatchError::Other("post-dispatch error");
+
+			RemarkDispatchHandlerMock::mock_post_dispatch_check(move |_t| Err(expected_error));
+
+			assert_noop!(
+				Remarks::remark(
+					RuntimeOrigin::signed(1),
+					remarks.clone(),
+					call.clone().into()
+				),
+				expected_error
+			);
+		});
+	}
+
+	#[test]
+	fn nested_remark_call_failure() {
 		new_test_ext().execute_with(|| {
 			let remarks = get_test_remarks();
 
@@ -83,6 +159,8 @@ mod remark {
 					remark: vec![3, 4, 5],
 				})),
 			});
+
+			RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |_t| Ok(()));
 
 			assert_noop!(
 				Remarks::remark(
@@ -96,11 +174,46 @@ mod remark {
 	}
 
 	#[test]
+	fn remark_in_batch_call_success() {
+		new_test_ext().execute_with(|| {
+			let remarks = get_test_remarks();
+
+			let batch_call = RuntimeCall::Utility(UtilityCall::batch {
+				calls: vec![
+					RuntimeCall::Remarks(Call::remark {
+						remarks: Default::default(),
+						call: Box::new(RuntimeCall::System(SystemCall::remark {
+							remark: vec![1, 2, 3],
+						})),
+					}),
+					RuntimeCall::Remarks(Call::remark {
+						remarks: Default::default(),
+						call: Box::new(RuntimeCall::System(SystemCall::remark {
+							remark: vec![4, 5, 6],
+						})),
+					}),
+				],
+			});
+
+			RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |_t| Ok(()));
+			RemarkDispatchHandlerMock::mock_post_dispatch_check(move |_t| Ok(()));
+
+			assert_ok!(Remarks::remark(
+				RuntimeOrigin::signed(1),
+				remarks.clone(),
+				batch_call.clone().into()
+			));
+		});
+	}
+
+	#[test]
 	fn inner_call_failure() {
 		new_test_ext().execute_with(|| {
 			let remarks = get_test_remarks();
 
 			let call = RuntimeCall::System(SystemCall::set_heap_pages { pages: 8 });
+
+			RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |_t| Ok(()));
 
 			assert_noop!(
 				Remarks::remark(

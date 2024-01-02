@@ -18,6 +18,7 @@ use frame_support::{
 	BoundedVec,
 };
 use frame_system::pallet_prelude::*;
+pub use handler::*;
 pub use pallet::*;
 use sp_runtime::traits::Dispatchable;
 use sp_std::boxed::Box;
@@ -31,6 +32,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod handler;
 mod weights;
 
 #[frame_support::pallet]
@@ -40,6 +42,9 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// The handler used to check remarks before and after call dispatch.
+		type RemarkDispatchHandler: RemarkDispatchHandler<RemarkArgs<Self>>;
 
 		/// The overarching call type.
 		type RuntimeCall: Parameter
@@ -57,7 +62,7 @@ pub mod pallet {
 
 		/// Type that restrains the maximum remarks that can be attached to a
 		/// call.
-		type MaxRemarks: Get<u32>;
+		type MaxRemarksPerCall: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -68,7 +73,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// A remark was made.
 		Remark {
-			remarks: BoundedVec<T::Remark, T::MaxRemarks>,
+			remarks: BoundedVec<T::Remark, T::MaxRemarksPerCall>,
 			call: <T as Config>::RuntimeCall,
 		},
 	}
@@ -87,18 +92,24 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight({
 			let dispatch_info = call.get_dispatch_info();
-			(T::WeightInfo::remark()
+			(T::WeightInfo::remark(T::MaxRemarksPerCall::get())
 				.saturating_add(dispatch_info.weight),
 			dispatch_info.class)
 		})]
 		pub fn remark(
 			origin: OriginFor<T>,
-			remarks: BoundedVec<T::Remark, T::MaxRemarks>,
+			remarks: BoundedVec<T::Remark, T::MaxRemarksPerCall>,
 			call: Box<<T as Config>::RuntimeCall>,
 		) -> DispatchResult {
 			ensure!(!remarks.is_empty(), Error::<T>::NoRemarks);
 
-			let mut filtered_origin = origin;
+			T::RemarkDispatchHandler::pre_dispatch_check((
+				origin.clone(),
+				remarks.clone(),
+				call.clone(),
+			))?;
+
+			let mut filtered_origin = origin.clone();
 
 			// Nested remark calls are not allowed.
 			filtered_origin.add_filter(move |c: &<T as frame_system::Config>::RuntimeCall| {
@@ -110,6 +121,8 @@ pub mod pallet {
 				.dispatch(filtered_origin)
 				.map(|_| ())
 				.map_err(|e| e.error)?;
+
+			T::RemarkDispatchHandler::post_dispatch_check((origin, remarks.clone(), call.clone()))?;
 
 			Self::deposit_event(Event::Remark {
 				remarks,

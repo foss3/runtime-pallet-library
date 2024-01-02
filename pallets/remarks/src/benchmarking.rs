@@ -28,14 +28,14 @@ benchmarks! {
 	}
 
 	remark {
-		let c in 1 .. T::MaxRemarks::get();
+		let c in 1 .. T::MaxRemarksPerCall::get();
 		let mut remarks = Vec::new();
 
 		for i in 0 .. c {
 			remarks.push(T::Remark::default())
 		}
 
-		let remarks = BoundedVec::<T::Remark, T::MaxRemarks>::try_from(remarks).expect("can build remarks");
+		let remarks = BoundedVec::<T::Remark, T::MaxRemarksPerCall>::try_from(remarks).expect("can build remarks");
 
 		let caller: T::AccountId = account("acc_0", 0, 0);
 		let call: <T as Config>::RuntimeCall = frame_system::Call::remark { remark: vec![] }.into();

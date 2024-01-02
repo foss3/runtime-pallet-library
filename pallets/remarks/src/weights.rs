@@ -12,11 +12,11 @@
 use frame_support::weights::Weight;
 
 pub trait WeightInfo {
-	fn remark() -> Weight;
+	fn remark(r: u32) -> Weight;
 }
 
 impl WeightInfo for () {
-	fn remark() -> Weight {
+	fn remark(_r: u32) -> Weight {
 		Weight::zero()
 	}
 }

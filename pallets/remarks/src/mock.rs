@@ -13,7 +13,11 @@ use frame_support::{construct_runtime, pallet_prelude::ConstU32, parameter_types
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::{BuildStorage, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+	BuildStorage,
+};
 
 pub use crate as pallet_remarks;
 use crate::pallet::Config;
@@ -29,7 +33,9 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Storage, Event<T>},
+		RemarkDispatchHandlerMock: pallet_mock_test,
 		Remarks: pallet_remarks::{Pallet, Call, Event<T>},
+		Utility: pallet_utility::{Pallet, Call, Event},
 	}
 );
 
@@ -69,7 +75,7 @@ impl frame_system::Config for Runtime {
 pub type Balance = u128;
 
 parameter_types! {
-	pub const MaxRemarks: u32 = 3;
+	pub const MaxRemarksPerCall: u32 = 3;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Encode, Decode, TypeInfo)]
@@ -80,13 +86,61 @@ pub enum TestRemark {
 
 impl Default for TestRemark {
 	fn default() -> Self {
-		TestRemark::SomeBytes(BoundedVec::try_from(vec![1,2,3]).expect("can build default test remark"))
+		TestRemark::SomeBytes(
+			BoundedVec::try_from(vec![1, 2, 3]).expect("can build default test remark"),
+		)
 	}
 }
 
+#[allow(unused_imports)]
+#[frame_support::pallet]
+mod pallet_mock_test {
+	use frame_support::pallet_prelude::*;
+	use mock_builder::{execute_call, register_call};
+
+	use crate::{RemarkArgs, RemarkDispatchHandler};
+
+	#[pallet::config]
+	pub trait Config: frame_system::Config + crate::Config {}
+
+	#[pallet::pallet]
+	pub struct Pallet<T>(_);
+
+	#[pallet::storage]
+	pub(super) type CallIds<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		<Blake2_128 as frame_support::StorageHasher>::Output,
+		mock_builder::CallId,
+	>;
+
+	impl<T: Config> Pallet<T> {
+		pub fn mock_pre_dispatch_check(f: impl Fn(RemarkArgs<T>) -> DispatchResult + 'static) {
+			register_call!(move |t| f(t));
+		}
+
+		pub fn mock_post_dispatch_check(f: impl Fn(RemarkArgs<T>) -> DispatchResult + 'static) {
+			register_call!(move |t| f(t));
+		}
+	}
+
+	impl<T: Config> RemarkDispatchHandler<RemarkArgs<T>> for Pallet<T> {
+		fn pre_dispatch_check(t: RemarkArgs<T>) -> DispatchResult {
+			execute_call!(t)
+		}
+
+		fn post_dispatch_check(t: RemarkArgs<T>) -> DispatchResult {
+			execute_call!(t)
+		}
+	}
+}
+
+impl pallet_mock_test::Config for Runtime {}
+
 impl Config for Runtime {
-	type MaxRemarks = MaxRemarks;
+	type MaxRemarksPerCall = MaxRemarksPerCall;
 	type Remark = TestRemark;
+	type RemarkDispatchHandler = pallet_mock_test::Pallet<Runtime>;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
@@ -114,12 +168,17 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl pallet_utility::Config for Runtime {
+	type PalletsOrigin = OriginCaller;
+	type RuntimeCall = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+}
+
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut ext: sp_io::TestExternalities = GenesisConfig::default()
-		.build_storage()
-		.unwrap()
-		.into();
+	let mut ext: sp_io::TestExternalities =
+		GenesisConfig::default().build_storage().unwrap().into();
 
 	// Ensure that we set a block number otherwise no events would be deposited.
 	ext.execute_with(|| frame_system::Pallet::<Runtime>::set_block_number(1));
