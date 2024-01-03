@@ -185,3 +185,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	ext
 }
+
+pub fn configure_mocks() {
+	RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |_t| Ok(()));
+	RemarkDispatchHandlerMock::mock_post_dispatch_check(move |_t| Ok(()));
+}
