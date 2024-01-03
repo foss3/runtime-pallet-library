@@ -11,6 +11,8 @@
 // GNU General Public License for more details.
 use frame_support::{assert_noop, assert_ok, pallet_prelude::ConstU32, BoundedVec};
 use frame_system::Call as SystemCall;
+use pallet_balances::Call as BalancesCall;
+use pallet_proxy::Call as ProxyCall;
 use pallet_utility::Call as UtilityCall;
 use sp_runtime::DispatchError::BadOrigin;
 
@@ -222,6 +224,33 @@ mod remark {
 					call.clone().into()
 				),
 				BadOrigin
+			);
+		});
+	}
+
+	#[test]
+	fn inner_proxy_call_failure() {
+		new_test_ext().execute_with(|| {
+			let remarks = get_test_remarks();
+
+			let proxy_origin = RuntimeOrigin::signed(1);
+			let real_origin = RuntimeOrigin::signed(2);
+			let transfer_dest = RuntimeOrigin::signed(3);
+
+			let call = RuntimeCall::Proxy(ProxyCall::proxy {
+				real: real_origin.as_signed().unwrap(),
+				force_proxy_type: None,
+				call: Box::new(RuntimeCall::Balances(BalancesCall::transfer {
+					dest: transfer_dest.as_signed().unwrap(),
+					value: 100,
+				})),
+			});
+
+			RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |_t| Ok(()));
+
+			assert_noop!(
+				Remarks::remark(proxy_origin, remarks.clone(), call.clone().into()),
+				pallet_proxy::Error::<Runtime>::NotProxy,
 			);
 		});
 	}

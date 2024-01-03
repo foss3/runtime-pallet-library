@@ -9,8 +9,11 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-use frame_support::{construct_runtime, pallet_prelude::ConstU32, parameter_types, BoundedVec};
-use parity_scale_codec::{Decode, Encode};
+use frame_support::{
+	construct_runtime, pallet_prelude::ConstU32, parameter_types, traits::InstanceFilter,
+	BoundedVec,
+};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::{
@@ -32,10 +35,11 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		RemarkDispatchHandlerMock: pallet_mock_test,
 		Remarks: pallet_remarks::{Pallet, Call, Event<T>},
 		Utility: pallet_utility::{Pallet, Call, Event},
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -175,6 +179,44 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = ();
 }
 
+#[derive(
+	Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, MaxEncodedLen, TypeInfo,
+)]
+pub enum ProxyType {
+	Any,
+	None,
+}
+
+impl Default for ProxyType {
+	fn default() -> Self {
+		Self::Any
+	}
+}
+
+impl InstanceFilter<RuntimeCall> for ProxyType {
+	fn filter(&self, _c: &RuntimeCall) -> bool {
+		match self {
+			ProxyType::Any => true,
+			ProxyType::None => false,
+		}
+	}
+}
+
+impl pallet_proxy::Config for Runtime {
+	type AnnouncementDepositBase = ();
+	type AnnouncementDepositFactor = ();
+	type CallHasher = BlakeTwo256;
+	type Currency = ();
+	type MaxPending = ();
+	type MaxProxies = ();
+	type ProxyDepositBase = ();
+	type ProxyDepositFactor = ();
+	type ProxyType = ProxyType;
+	type RuntimeCall = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+}
+
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities =
@@ -186,6 +228,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	ext
 }
 
+#[allow(unused)]
 pub fn configure_mocks() {
 	RemarkDispatchHandlerMock::mock_pre_dispatch_check(move |_t| Ok(()));
 	RemarkDispatchHandlerMock::mock_post_dispatch_check(move |_t| Ok(()));

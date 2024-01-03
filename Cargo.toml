@@ -25,5 +25,6 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 
 mock-builder = { path = "mock-builder", default-features = false }
