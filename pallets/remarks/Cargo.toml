@@ -1,0 +1,53 @@
+[package]
+name = "pallet-remarks"
+authors = ["Centrifuge <admin@centrifuge.io>"]
+description = "Remarks pallet for runtime"
+edition = "2021"
+license = "LGPL-3.0"
+repository = "https://github.com/foss3/runtime-pallet-library"
+version = "0.0.1"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
+
+frame-benchmarking = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+[dev-dependencies]
+mock-builder = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-utility = { workspace = true }
+pallet-proxy = { workspace = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+  "parity-scale-codec/std",
+  "scale-info/std",
+  "frame-benchmarking/std",
+  "frame-support/std",
+  "frame-system/std",
+  "sp-runtime/std",
+  "sp-std/std",
+  "pallet-proxy/std",
+]
+runtime-benchmarks = [
+  "frame-benchmarking/runtime-benchmarks",
+  "frame-support/runtime-benchmarks",
+  "frame-system/runtime-benchmarks",
+  "sp-runtime/runtime-benchmarks",
+]
+try-runtime = [
+  "frame-support/try-runtime",
+  "frame-system/try-runtime",
+  "sp-runtime/try-runtime",
+]
