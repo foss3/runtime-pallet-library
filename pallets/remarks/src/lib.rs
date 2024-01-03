@@ -18,7 +18,6 @@ use frame_support::{
 	BoundedVec,
 };
 use frame_system::pallet_prelude::*;
-pub use handler::*;
 pub use pallet::*;
 use sp_runtime::traits::Dispatchable;
 use sp_std::boxed::Box;
@@ -32,7 +31,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod handler;
 mod weights;
 
 #[frame_support::pallet]
@@ -131,5 +129,34 @@ pub mod pallet {
 
 			Ok(())
 		}
+	}
+}
+
+/// The type used in the RemarkDispatchHandler trait of the pallet's Config.
+pub type RemarkArgs<T> = (
+	OriginFor<T>,
+	BoundedVec<<T as Config>::Remark, <T as Config>::MaxRemarksPerCall>,
+	Box<<T as Config>::RuntimeCall>,
+);
+
+/// The handler used to check remarks before and after call dispatch.
+pub trait RemarkDispatchHandler<T> {
+	fn pre_dispatch_check(t: T) -> DispatchResult;
+
+	fn post_dispatch_check(t: T) -> DispatchResult;
+}
+
+pub struct NoopRemarkDispatchHandler<T>(PhantomData<T>);
+
+impl<T> RemarkDispatchHandler<RemarkArgs<T>> for NoopRemarkDispatchHandler<T>
+where
+	T: Config,
+{
+	fn pre_dispatch_check(_t: RemarkArgs<T>) -> DispatchResult {
+		Ok(())
+	}
+
+	fn post_dispatch_check(_t: RemarkArgs<T>) -> DispatchResult {
+		Ok(())
 	}
 }
