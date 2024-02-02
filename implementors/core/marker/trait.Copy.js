@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"mock_builder":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"mock_builder/location/enum.TraitInfo.html\" title=\"enum mock_builder::location::TraitInfo\">TraitInfo</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

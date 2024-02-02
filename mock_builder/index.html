@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="`mock-builder` allows you to create mock pallets. A mock pallet is a regular pallet that implements some traits whose behavior can be implemented on the fly by closures. They are perfect for testing because they allow you to customize each test case, getting organized and accurate tests for your pallet. Mock pallet is not just a trait mocked, it’s a whole pallet that can implement one or more traits and can be added to runtimes."><title>mock_builder - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="mock_builder" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0-nightly (9d871b061 2023-05-21)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-6f6ffb5395b17c6e.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../mock_builder/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../mock_builder/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2 class="location"><a href="#">Crate mock_builder</a></h2><div class="sidebar-elems"><ul class="block"><li class="version">Version 0.2.0</li><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#reexports">Re-exports</a></li><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#constants">Constants</a></li><li><a href="#functions">Functions</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">mock_builder</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/mock_builder/lib.rs.html#14-344">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><code>mock-builder</code> allows you to create <em>mock pallets</em>.
+A <em>mock pallet</em> is a regular pallet that implements some traits whose
+behavior can be implemented on the fly by closures. They are perfect for
+testing because they allow you to customize each test case, getting
+organized and accurate tests for your pallet. <em>Mock pallet</em> is not just a
+trait mocked, it’s a whole pallet that can implement one or more traits and
+can be added to runtimes.</p>
+<h2 id="motivation"><a href="#motivation">Motivation</a></h2>
+<p>Pallets have dependencies. Programming in a
+<a href="https://docs.substrate.io/build/pallet-coupling">loosely coupled</a>
+way is great for getting rid of those dependencies for the implementation.
+Nevertheless, those dependencies still exist in testing because when the
+<code>mock.rs</code> file is defined, you’re forced to give some implementations for
+the associated types of your pallet <code>Config</code>.</p>
+<p>Then, you are mostly forced to use other pallet configurations
+getting a <a href="https://docs.substrate.io/build/pallet-coupling/">tight coupling</a>
+with them. It has some downsides:</p>
+<ul>
+<li>You need to learn how to configure other pallets.</li>
+<li>You need to know how those pallets work, because they affect directly the
+behavior of the pallet you’re testing.</li>
+<li>The way they work can give you non-completed tests. It means that some
+paths of your pallet can not be tested because some dependency works in a
+specific way.</li>
+<li>You need a lot of effort maintaining your tests because each time one
+dependency changes, it can easily break your tests.</li>
+</ul>
+<p>This doesn’t scale well. Frequently some pallet dependencies need in turn to
+configure their own dependent pallets, making this problem even worse.</p>
+<p>This is why mocking is so important. It lets you get rid of all these
+dependencies and related issues, obtaining <strong>loose coupling tests</strong>.</p>
+<p>There are other crates focusing on this problem,
+such as <a href="https://docs.rs/mockall/latest/mockall/"><code>mockall</code></a>,
+but they mock traits. Instead, this crate gives you an entire pallet
+ready to use in any runtime, implementing the number of traits you specify.</p>
+<h3 id="mock-pallet-usage"><a href="#mock-pallet-usage"><em>Mock pallet</em> usage</a></h3>
+<p>Suppose that in our pallet, which we’ll call it <code>my_pallet</code>, we have an
+associated type in our <code>Config</code>, which implements traits <code>TraitA</code> and
+<code>TraitB</code>. Those traits are defined as follows:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">trait </span>TraitA {
+    <span class="kw">type </span>AssocA;
+
+    <span class="kw">fn </span>foo() -&gt; <span class="self">Self</span>::AssocA;
+}
+
+<span class="kw">trait </span>TraitB {
+    <span class="kw">type </span>AssocB;
+
+    <span class="kw">fn </span>bar(a: u64, b: <span class="self">Self</span>::AssocB) -&gt; u32;
+}</code></pre></div>
+<p>We have a really huge pallet that implements a specific behavior for those
+traits, but we want to get rid of such dependency so we <a href="#mock-pallet-creation">generate a <em>mock
+pallet</em></a>, we’ll call it <code>pallet_mock_dep</code>.</p>
+<p>We can add this <em>mock pallet</em> to the runtime as usual:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="macro">frame_support::construct_runtime!</span>(
+    <span class="kw">pub struct </span>Runtime {
+        System: frame_system,
+        MockDep: pallet_mock_dep,
+        MyPallet: my_pallet,
+    }
+);</code></pre></div>
+<p>And we configure it as a regular pallet:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">impl </span>pallet_mock_dep::Config <span class="kw">for </span>Runtime {
+    <span class="kw">type </span>AssocA = bool;
+    <span class="kw">type </span>AssocB = u8;
+}</code></pre></div>
+<p>Later in our use case, we can give a behavior for both <code>foo()</code> and <code>bar()</code>
+methods in their analogous methods <code>mock_foo()</code> and <code>mock_bar()</code> which
+accept a closure.</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#[test]
+</span><span class="kw">fn </span>correct() {
+    new_test_ext().execute_with(|| {
+        MockDep::mock_foo(|| <span class="bool-val">true</span>);
+        MockDep::mock_bar(|a, b| {
+            <span class="macro">assert_eq!</span>(a, <span class="number">42</span>);
+            <span class="macro">assert_eq!</span>(b, <span class="bool-val">false</span>);
+            <span class="number">23
+        </span>});
+
+        <span class="comment">// This method will call foo() and bar() under the hood, running the
+        // closures we just have defined.
+        </span>MyPallet::my_call();
+    });
+}</code></pre></div>
+<p>Take a look to the <a href="https://github.com/foss3/runtime-pallet-library/blob/main/mock-builder/tests/pallet.rs">pallet
+tests</a>
+to have a user view of how to use a <em>mock pallet</em>.
+It supports any kind of trait, with reference
+parameters and generics at trait level and method level.</p>
+<h3 id="mock-pallet-creation"><a href="#mock-pallet-creation">Mock pallet creation</a></h3>
+<p><strong>NOTE: There is a working progress on this part to generate <em>mock pallets</em>
+automatically using procedural macros. Once done, all this part can be
+auto-generated.</strong></p>
+<p>This crate exports two macros <a href="macro.register_call.html" title="macro mock_builder::register_call"><code>register_call!()</code></a> and <a href="macro.execute_call.html" title="macro mock_builder::execute_call"><code>execute_call!()</code></a>
+that allow you to build a <em>mock pallet</em>.</p>
+<ul>
+<li>
+<p><a href="macro.register_call.html" title="macro mock_builder::register_call"><code>register_call!()</code></a> registers a closure where you can define the
+mock behavior for that method. The method which registers the closure must
+have the name of the trait method you want to mock prefixed with <code>mock_</code>.</p>
+</li>
+<li>
+<p><a href="macro.execute_call.html" title="macro mock_builder::execute_call"><code>execute_call!()</code></a> is placed in the trait method implementation and will
+call the closure previously registered by <a href="macro.register_call.html" title="macro mock_builder::register_call"><code>register_call!()</code></a></p>
+</li>
+</ul>
+<p>The only condition to use these macros is to have the following storage in
+the pallet (it’s safe to just copy and paste this snippet in your pallet):</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>
+<span class="attr">#[pallet::storage]
+</span><span class="kw">type </span>CallIds&lt;T: Config&gt; = StorageMap&lt;<span class="kw">_</span>, <span class="kw">_</span>, String, mock_builder::CallId&gt;;
+</code></pre></div>
+<p>Following the above example, generating a <em>mock pallet</em> for both <code>TraitA</code>
+and <code>TraitB</code> is done as follows:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[frame_support::pallet(dev_mode)]
+</span><span class="kw">pub mod </span>pallet {
+
+    <span class="kw">use </span>frame_support::pallet_prelude::<span class="kw-2">*</span>;
+    <span class="kw">use </span>mock_builder::{execute_call, register_call};
+
+    <span class="attr">#[pallet::config]
+    </span><span class="kw">pub trait </span>Config: frame_system::Config {
+        <span class="kw">type </span>AssocA;
+        <span class="kw">type </span>AssocB;
+    }
+
+    <span class="attr">#[pallet::pallet]
+    </span><span class="kw">pub struct </span>Pallet&lt;T&gt;(<span class="kw">_</span>);
+
+    <span class="attr">#[pallet::storage]
+    </span><span class="kw">type </span>CallIds&lt;T: Config&gt; = StorageMap&lt;<span class="kw">_</span>, <span class="kw">_</span>, String, mock_builder::CallId&gt;;
+
+    <span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
+        <span class="kw">fn </span>mock_foo(f: <span class="kw">impl </span>Fn() -&gt; T::AssocA + <span class="lifetime">&#39;static</span>) {
+            <span class="macro">register_call!</span>(<span class="kw">move </span>|()| f())
+        }
+
+        <span class="kw">fn </span>mock_bar(f: <span class="kw">impl </span>Fn(u64, T::AssocB) -&gt; u32 + <span class="lifetime">&#39;static</span>) {
+            <span class="macro">register_call!</span>(<span class="kw">move </span>|(a, b)| f(a, b))
+        }
+    }
+
+    <span class="kw">impl</span>&lt;T: Config&gt; TraitA <span class="kw">for </span>Pallet&lt;T&gt; {
+        <span class="kw">type </span>AssocA = T::AssocA;
+
+        <span class="kw">fn </span>foo() -&gt; <span class="self">Self</span>::AssocA {
+            <span class="macro">execute_call!</span>(())
+        }
+    }
+
+    <span class="kw">impl</span>&lt;T: Config&gt; TraitB <span class="kw">for </span>Pallet&lt;T&gt; {
+        <span class="kw">type </span>AssocB = T::AssocB;
+
+        <span class="kw">fn </span>bar(a: u64, b: <span class="self">Self</span>::AssocB) -&gt; u32 {
+            <span class="macro">execute_call!</span>((a, b))
+        }
+    }
+}</code></pre></div>
+<p>If types for the closure of <code>mock_*</code> method and trait method don’t match,
+you will obtain a runtime error in your tests.</p>
+<h3 id="mock-patterns"><a href="#mock-patterns">Mock Patterns</a></h3><h5 id="storage-pattern"><a href="#storage-pattern">Storage pattern</a></h5>
+<p>In some cases it’s pretty common making a mock that returns a value that was
+set previously by another mock. For this case you can define your “getter”
+mock inside the definition of the “setter” mock, as follows:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>MyMock::mock_set(|value| MyMock::mock_get(<span class="kw">move </span>|| value));</code></pre></div>
+<p>Any call to <code>get()</code> will return the last value given to <code>set()</code>.</p>
+<h5 id="check-internal-callsare-ordered"><a href="#check-internal-callsare-ordered">Check internal calls are ordered</a></h5>
+<p>If you want to test some mocks method are calle in some order, you can
+define them nested, in the expected order they must be called</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>MyMock::mock_first(|| {
+    MyMock::mock_second(|| {
+        MyMock::mock_third(|| {
+            <span class="comment">//...
+        </span>})
+    })
+});
+
+
+<span class="comment">// The next method only will be succesful
+// if it makes the internal calls in order
+</span>MyPallet::calls_first_second_third();</code></pre></div>
+</div></details><h2 id="reexports" class="small-section-header"><a href="#reexports">Re-exports</a></h2><ul class="item-table"><li><div class="item-name" id="reexport.CallId"><code>pub use storage::<a class="type" href="storage/type.CallId.html" title="type mock_builder::storage::CallId">CallId</a>;</code></div></li></ul><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="location/index.html" title="mod mock_builder::location">location</a></div><div class="desc docblock-short">Provide functions for handle fuction locations</div></li><li><div class="item-name"><a class="mod" href="storage/index.html" title="mod mock_builder::storage">storage</a></div><div class="desc docblock-short">Provide functions for register/execute calls
+This module is in change of storing closures with the type <code>Fn(I) -&gt; O</code>
+in a static lifetime storage, supporting mixing differents <code>I</code> and <code>O</code>
+types. Because we need to merge different closures with different types in
+the same storage, we use an <code>u128</code> as closure identification (composed by
+the closure function pointer (<code>u64</code>) and the pointer to the closure metadata
+(<code>u64</code>).</div></li></ul><h2 id="macros" class="small-section-header"><a href="#macros">Macros</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.execute_call.html" title="macro mock_builder::execute_call">execute_call</a></div><div class="desc docblock-short">Execute a function from the function storage.
+Same as <code>execute()</code> but it uses as locator who calls this macro.</div></li><li><div class="item-name"><a class="macro" href="macro.execute_call_instance.html" title="macro mock_builder::execute_call_instance">execute_call_instance</a></div><div class="desc docblock-short">Execute a function from the function storage for a pallet with instances.
+Same as <code>execute()</code> but it uses as locator who calls this macro.</div></li><li><div class="item-name"><a class="macro" href="macro.register_call.html" title="macro mock_builder::register_call">register_call</a></div><div class="desc docblock-short">Register a mock function into the mock function storage.
+Same as <code>register()</code> but it uses as locator who calls this macro.</div></li><li><div class="item-name"><a class="macro" href="macro.register_call_instance.html" title="macro mock_builder::register_call_instance">register_call_instance</a></div><div class="desc docblock-short">Register a mock function into the mock function storage for a pallet with
+instances. Same as <code>register()</code> but it uses as locator who calls this macro.</div></li></ul><h2 id="constants" class="small-section-header"><a href="#constants">Constants</a></h2><ul class="item-table"><li><div class="item-name"><a class="constant" href="constant.MOCK_FN_PREFIX.html" title="constant mock_builder::MOCK_FN_PREFIX">MOCK_FN_PREFIX</a></div><div class="desc docblock-short">Prefix that the register functions should have.</div></li></ul><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2><ul class="item-table"><li><div class="item-name"><a class="fn" href="fn.execute.html" title="fn mock_builder::execute">execute</a></div><div class="desc docblock-short">Execute a function from the function storage.
+This function should be called with a locator used as a function
+identification.</div></li><li><div class="item-name"><a class="fn" href="fn.register.html" title="fn mock_builder::register">register</a></div><div class="desc docblock-short">Register a mock function into the mock function storage.
+This function should be called with a locator used as a function
+identification.</div></li></ul></section></div></main></body></html>
