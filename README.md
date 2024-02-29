@@ -13,7 +13,7 @@ General purpose utilities and pallets for [_Substrate_](https://substrate.io/).
 
 ### Pallets
 
-None so far.
+- [`pallet-remarks`](pallets/remarks): Add remarks to calls
 
 ## Projects using RPL (Runtime Pallet Library)
 
