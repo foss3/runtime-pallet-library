@@ -4,7 +4,7 @@ description = "Build mock pallets from traits"
 edition = "2021"
 license = "LGPL-3.0"
 name = "mock-builder"
-repository = "https://github.com/centrifuge/centrifuge-chain"
+repository = "https://github.com/foss3/runtime-pallet-library"
 version = "0.2.0"
 
 [package.metadata.docs.rs]
@@ -14,7 +14,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 frame-support = { workspace = true }
 
 [dev-dependencies]
-codec = { package = "parity-scale-codec", workspace = true, features = ["default"] }
+parity-scale-codec = { workspace = true }
 frame-system = { workspace = true, features = ["default"] }
 scale-info = { workspace = true, features = ["default"] }
 sp-core = { workspace = true, features = ["default"] }
