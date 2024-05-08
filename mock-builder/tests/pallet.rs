@@ -159,7 +159,10 @@ pub mod my_pallet {
 }
 
 mod mock {
-	use frame_support::traits::{ConstU16, ConstU32, ConstU64};
+	use frame_support::{
+		derive_impl,
+		traits::{ConstU16, ConstU32, ConstU64},
+	};
 	use sp_core::H256;
 	use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 
@@ -173,40 +176,15 @@ mod mock {
 		}
 	);
 
+	#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 	impl frame_system::Config for Runtime {
-		type AccountData = ();
-		type AccountId = u64;
-		type BaseCallFilter = frame_support::traits::Everything;
 		type Block = frame_system::mocking::MockBlock<Runtime>;
-		type BlockHashCount = ConstU64<250>;
-		type BlockLength = ();
-		type BlockWeights = ();
-		type DbWeight = ();
-		type Hash = H256;
-		type Hashing = BlakeTwo256;
-		type Lookup = IdentityLookup<Self::AccountId>;
-		type MaxConsumers = ConstU32<16>;
-		type Nonce = u64;
-		type OnKilledAccount = ();
-		type OnNewAccount = ();
-		type OnSetCode = ();
-		type PalletInfo = PalletInfo;
-		type RuntimeCall = RuntimeCall;
-		type RuntimeEvent = RuntimeEvent;
-		type RuntimeOrigin = RuntimeOrigin;
-		type SS58Prefix = ConstU16<42>;
-		type SystemWeightInfo = ();
-		type Version = ();
 	}
 
 	impl pallet_mock_test::Config for Runtime {}
 
 	impl my_pallet::Config for Runtime {
 		type ActionAB = pallet_mock_test::Pallet<Runtime>;
-	}
-
-	pub fn new_test_ext() -> sp_io::TestExternalities {
-		sp_io::TestExternalities::new(Default::default())
 	}
 }
 
@@ -217,7 +195,7 @@ mod test {
 
 	#[test]
 	fn basic() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_qux(|p1| &p1 == "hello");
 
 			assert_eq!(MockTest::qux("hello".into()), true);
@@ -226,7 +204,7 @@ mod test {
 
 	#[test]
 	fn correct_flow() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_foo(|p1, _| assert_eq!("hello", &p1));
 			MockTest::mock_qux(|p1| &p1 == "hello");
 			MockTest::mock_bar(|_, p2| match p2 {
@@ -241,7 +219,7 @@ mod test {
 	#[test]
 	#[should_panic]
 	fn wrong() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_foo(|p1, _| assert_eq!("hello", &p1));
 
 			assert_ok!(MyPallet::my_call("bye".into(), 42));
@@ -251,7 +229,7 @@ mod test {
 	#[test]
 	#[should_panic]
 	fn mock_not_configured() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			assert_ok!(MyPallet::my_call("hello".into(), 42));
 		});
 	}
@@ -266,7 +244,7 @@ mod test {
 
 	#[test]
 	fn generic_input() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_generic_input(|p1: i8, p2: u8| {
 				assert_eq!(p1, 1);
 				assert_eq!(p2, 2);
@@ -286,7 +264,7 @@ mod test {
 	#[test]
 	#[should_panic]
 	fn generic_input_not_found() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_generic_input(|p1: i8, p2: u8| {
 				assert_eq!(p1, 3);
 				assert_eq!(p2, 4);
@@ -299,7 +277,7 @@ mod test {
 
 	#[test]
 	fn generic_output() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_generic_output(|| 8i8);
 			MockTest::mock_generic_output(|| 16i16);
 
@@ -310,7 +288,7 @@ mod test {
 
 	#[test]
 	fn reference() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_reference(|a| a);
 
 			assert_eq!(MockTest::reference(&42), &42);
@@ -319,7 +297,7 @@ mod test {
 
 	#[test]
 	fn get_last_set() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_set(|v| MockTest::mock_get(move || v));
 
 			MockTest::set(23);
@@ -332,7 +310,7 @@ mod test {
 
 	#[test]
 	fn method_with_same_name() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_TraitA_same_name(|a, b| {
 				assert_eq!(a, true);
 				assert_eq!(b, 42);
@@ -350,7 +328,7 @@ mod test {
 
 	#[test]
 	fn method_from_generic_trait_long_path() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			MockTest::mock_TraitGen_generic(|| 23);
 
 			assert_eq!(MockTest::generic(), 23);
