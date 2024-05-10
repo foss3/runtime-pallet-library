@@ -10,13 +10,12 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 use frame_support::{
-	construct_runtime, pallet_prelude::ConstU32, parameter_types, traits::InstanceFilter,
-	BoundedVec,
+	construct_runtime, derive_impl, pallet_prelude::ConstU32, parameter_types,
+	traits::InstanceFilter, BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_core::H256;
-use sp_runtime::traits::{BlakeTwo256, ConstU128, ConstU16, ConstU64, IdentityLookup};
+use sp_runtime::traits::BlakeTwo256;
 
 pub use crate as pallet_remarks;
 use crate::pallet::Config;
@@ -32,33 +31,18 @@ construct_runtime!(
 	}
 );
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type AccountId = u64;
-	type BaseCallFilter = frame_support::traits::Everything;
 	type Block = frame_system::mocking::MockBlock<Runtime>;
-	type BlockHashCount = ConstU64<250>;
-	type BlockLength = ();
-	type BlockWeights = ();
-	type DbWeight = ();
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type MaxConsumers = ConstU32<16>;
-	type Nonce = u64;
-	type OnKilledAccount = ();
-	type OnNewAccount = ();
-	type OnSetCode = ();
-	type PalletInfo = PalletInfo;
-	type RuntimeCall = RuntimeCall;
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeOrigin = RuntimeOrigin;
-	type SS58Prefix = ConstU16<42>;
-	type SystemWeightInfo = ();
-	type Version = ();
 }
 
-pub type Balance = u128;
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig as pallet_balances::DefaultConfig)]
+impl pallet_balances::Config for Runtime {
+	type AccountStore = System;
+}
+
+pub type Balance = u64;
 
 parameter_types! {
 	pub const MaxRemarksPerCall: u32 = 3;
@@ -127,22 +111,6 @@ impl Config for Runtime {
 	type WeightInfo = ();
 }
 
-impl pallet_balances::Config for Runtime {
-	type AccountStore = System;
-	type Balance = Balance;
-	type DustRemoval = ();
-	type ExistentialDeposit = ConstU128<1>;
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
-	type MaxHolds = ConstU32<1>;
-	type MaxLocks = ConstU32<1>;
-	type MaxReserves = ();
-	type ReserveIdentifier = ();
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeHoldReason = ();
-	type WeightInfo = ();
-}
-
 impl pallet_utility::Config for Runtime {
 	type PalletsOrigin = OriginCaller;
 	type RuntimeCall = RuntimeCall;
@@ -186,16 +154,6 @@ impl pallet_proxy::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
-}
-
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut ext = sp_io::TestExternalities::new(Default::default());
-
-	// Ensure that we set a block number otherwise no events would be deposited.
-	ext.execute_with(|| frame_system::Pallet::<Runtime>::set_block_number(1));
-
-	ext
 }
 
 #[allow(unused)]

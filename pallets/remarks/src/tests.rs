@@ -35,7 +35,7 @@ mod remark {
 
 	#[test]
 	fn success() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			let origin = RuntimeOrigin::signed(1);
 			let remarks = get_test_remarks();
 
@@ -87,7 +87,7 @@ mod remark {
 
 	#[test]
 	fn no_remarks() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			let call = RuntimeCall::System(SystemCall::remark {
 				remark: vec![3, 4, 5],
 			});
@@ -105,7 +105,7 @@ mod remark {
 
 	#[test]
 	fn pre_dispatch_failure() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			let remarks = get_test_remarks();
 
 			let call = RuntimeCall::System(SystemCall::remark {
@@ -129,7 +129,7 @@ mod remark {
 
 	#[test]
 	fn post_dispatch_failure() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			let remarks = get_test_remarks();
 
 			let call = RuntimeCall::System(SystemCall::remark {
@@ -155,7 +155,7 @@ mod remark {
 
 	#[test]
 	fn nested_remark_call_failure() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			let remarks = get_test_remarks();
 
 			let call = RuntimeCall::Remarks(Call::remark {
@@ -180,7 +180,7 @@ mod remark {
 
 	#[test]
 	fn remark_in_batch_call_success() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			let remarks = get_test_remarks();
 
 			let batch_call = RuntimeCall::Utility(UtilityCall::batch {
@@ -213,7 +213,7 @@ mod remark {
 
 	#[test]
 	fn inner_call_failure() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			let remarks = get_test_remarks();
 
 			let call = RuntimeCall::System(SystemCall::set_heap_pages { pages: 8 });
@@ -233,7 +233,7 @@ mod remark {
 
 	#[test]
 	fn inner_proxy_call_failure() {
-		new_test_ext().execute_with(|| {
+		System::externalities().execute_with(|| {
 			let remarks = get_test_remarks();
 
 			let proxy_origin = RuntimeOrigin::signed(1);

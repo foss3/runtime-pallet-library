@@ -18,9 +18,3 @@ scale-info = { workspace = true, features = ["default"] }
 sp-core = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 sp-runtime = { workspace = true, features = ["default"] }
-
-[features]
-default = ["std"]
-std = [
-  "frame-support/std",
-]
