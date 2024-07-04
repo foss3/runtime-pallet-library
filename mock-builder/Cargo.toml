@@ -1,11 +1,11 @@
 [package]
 authors = ["Centrifuge <admin@centrifuge.io>"]
-description = "Build mock pallets from traits"
+description = "Build mocks from traits for Substrate"
 edition = "2021"
 license = "LGPL-3.0"
 name = "mock-builder"
 repository = "https://github.com/foss3/runtime-pallet-library"
-version = "0.2.0"
+version = "0.3.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

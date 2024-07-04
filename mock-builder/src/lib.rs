@@ -46,9 +46,9 @@
 //! There are other crates focusing on this problem,
 //! such as [`mockall`](https://docs.rs/mockall/latest/mockall/),
 //! but they do not know about the Substrate storage life cycle used by
-//! your pallets. This crate gives you a mock type ready to use in your current
-//! tests, without worring about setting up or freeing any inner state used by
-//! the mock.
+//! your pallets. This crate allows you to create a mocked type ready to use in
+//! your current tests, without worring about setting up or freeing any inner
+//! state used by the mock.
 //!
 //! ## Usage
 //!
@@ -110,18 +110,18 @@
 //!
 //! Take a look to the [pallet
 //! tests](https://github.com/foss3/runtime-pallet-library/blob/main/mock-builder/tests/pallet.rs)
-//! to have a user view of how to use a *mock pallet*.
+//! to have a user view of how to use a it.
 //! It supports any kind of trait, with reference
 //! parameters and generics at trait level and method level.
 //!
 //! ## Mock type creation
 //!
-//! **NOTE: There is a working progress on this part to generate *mock types*
+//! **NOTE: There is a working progress on this part to generate mocked types
 //! automatically using procedural macros. Once done, all this part could be
 //! auto-generated.**
 //!
 //! This crate exports two macros [`register_call!()`] and [`execute_call!()`]
-//! that allow you to build a *mock pallet*.
+//! that allow you to build your mocked type.
 //!
 //! - [`register_call!()`] registers a closure where you can define the
 //! mock behavior for that method. The method which registers the closure must
@@ -130,7 +130,7 @@
 //! - [`execute_call!()`] is placed in the trait method implementation and will
 //!   call the closure previously registered by [`register_call!()`]
 //!
-//! Following the above example, generating a *mock pallet* for both `TraitA`
+//! Following the above example, generating a mocked type for both `TraitA`
 //! and `TraitB` is done as follows:
 //! ```
 //! # trait TraitA {
