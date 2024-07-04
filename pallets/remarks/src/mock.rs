@@ -76,9 +76,6 @@ mod pallet_mock_test {
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
-	#[pallet::storage]
-	pub(super) type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
-
 	impl<T: Config> Pallet<T> {
 		pub fn mock_pre_dispatch_check(f: impl Fn(RemarkArgs<T>) -> DispatchResult + 'static) {
 			register_call!(move |t| f(t));

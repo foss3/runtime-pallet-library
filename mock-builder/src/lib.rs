@@ -140,27 +140,8 @@
 //! - [`execute_call!()`] is placed in the trait method implementation and will
 //!   call the closure previously registered by [`register_call!()`]
 //!
-//! The only condition to use these macros is to have the following storage in
-//! the pallet (it's safe to just copy and paste this snippet in your pallet):
-//!
-//! ```
-//! # #[frame_support::pallet(dev_mode)]
-//! # mod pallet {
-//! # use frame_support::pallet_prelude::*;
-//! # #[pallet::config]
-//! # pub trait Config: frame_system::Config { }
-//! # #[pallet::pallet]
-//! # pub struct Pallet<T>(_);
-//!
-//! #[pallet::storage]
-//! type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
-//!
-//! # }
-//! ```
-//!
 //! Following the above example, generating a *mock pallet* for both `TraitA`
 //! and `TraitB` is done as follows:
-//!
 //! ```
 //! #[frame_support::pallet(dev_mode)]
 //! pub mod pallet {
@@ -187,9 +168,6 @@
 //!
 //!     #[pallet::pallet]
 //!     pub struct Pallet<T>(_);
-//!
-//!     #[pallet::storage]
-//!     type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
 //!
 //!     impl<T: Config> Pallet<T> {
 //!         fn mock_foo(f: impl Fn() -> T::AssocA + 'static) {
@@ -228,7 +206,6 @@
 //! In some cases it's pretty common making a mock that returns a value that was
 //! set previously by another mock. For this case you can define your "getter"
 //! mock inside the definition of the "setter" mock, as follows:
-//!
 //! ```ignore
 //! MyMock::mock_set(|value| MyMock::mock_get(move || value));
 //! ```
@@ -238,7 +215,6 @@
 //! #### Check internal calls are ordered
 //! If you want to test some mocks method are calle in some order, you can
 //! define them nested, in the expected order they must be called
-//!
 //! ```ignore
 //! MyMock::mock_first(|| {
 //!     MyMock::mock_second(|| {
@@ -277,7 +253,7 @@ pub fn register<Locator, F, I, O, Insert>(locator: Locator, f: F, insert: Insert
 where
 	Locator: Fn(),
 	F: Fn(I) -> O + 'static,
-	Insert: Fn(String, CallId),
+	Insert: Fn(&[u8], &CallId),
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
@@ -285,7 +261,10 @@ where
 		.assimilate_trait_prefix()
 		.append_type_signature::<I, O>();
 
-	insert(location.get(TraitInfo::Whatever), storage::register_call(f))
+	insert(
+		location.get(TraitInfo::Whatever).as_bytes(),
+		&storage::register_call(f),
+	)
 }
 
 /// Execute a function from the function storage.
@@ -294,14 +273,14 @@ where
 pub fn execute<Locator, I, O, Get>(locator: Locator, input: I, get: Get) -> O
 where
 	Locator: Fn(),
-	Get: Fn(String) -> Option<CallId>,
+	Get: Fn(&[u8]) -> Option<CallId>,
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
 		.append_type_signature::<I, O>();
 
-	let call_id = get(location.get(TraitInfo::Yes))
-		.or_else(|| get(location.get(TraitInfo::No)))
+	let call_id = get(location.get(TraitInfo::Yes).as_bytes())
+		.or_else(|| get(location.get(TraitInfo::No).as_bytes()))
 		.unwrap_or_else(|| {
 			panic!("mock-builder ERROR: Mock was not found at: {location:#?}\n{HELP_MSG}")
 		});
@@ -316,16 +295,7 @@ where
 #[macro_export]
 macro_rules! register_call {
 	($f:expr) => {{
-		$crate::register(|| (), $f, CallIds::<T>::insert);
-	}};
-}
-
-/// Register a mock function into the mock function storage for a pallet with
-/// instances. Same as `register()` but it uses as locator who calls this macro.
-#[macro_export]
-macro_rules! register_call_instance {
-	($f:expr) => {{
-		$crate::register(|| (), $f, CallIds::<T, I>::insert);
+		$crate::register(|| (), $f, frame_support::storage::unhashed::put);
 	}};
 }
 
@@ -334,15 +304,6 @@ macro_rules! register_call_instance {
 #[macro_export]
 macro_rules! execute_call {
 	($input:expr) => {{
-		$crate::execute(|| (), $input, CallIds::<T>::get)
-	}};
-}
-
-/// Execute a function from the function storage for a pallet with instances.
-/// Same as `execute()` but it uses as locator who calls this macro.
-#[macro_export]
-macro_rules! execute_call_instance {
-	($input:expr) => {{
-		$crate::execute(|| (), $input, CallIds::<T, I>::get)
+		$crate::execute(|| (), $input, frame_support::storage::unhashed::get)
 	}};
 }

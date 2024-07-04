@@ -23,7 +23,6 @@ pub trait Storage {
 
 #[frame_support::pallet(dev_mode)]
 pub mod pallet_mock_test {
-	use frame_support::pallet_prelude::*;
 	use mock_builder::{execute_call, register_call};
 
 	#[pallet::config]
@@ -31,9 +30,6 @@ pub mod pallet_mock_test {
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
-
-	#[pallet::storage]
-	type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
 
 	impl<T: Config> Pallet<T> {
 		pub fn mock_foo(f: impl Fn(String, Option<u64>) + 'static) {
