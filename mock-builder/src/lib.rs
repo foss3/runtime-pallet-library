@@ -75,7 +75,7 @@
 //! [generate a mock](#mock-type-creation), and we configure it:
 //!
 //! ```ignore
-//! pub type MyMock = my_mock::MyMock<Runtime>;
+//! pub type MyMock = my_mock::Mock<Runtime>;
 //! impl my_mock::Config for Runtime {
 //!     type AssocA = bool;
 //!     type AssocB = u8;
@@ -110,7 +110,7 @@
 //!
 //! Take a look to the [pallet
 //! tests](https://github.com/foss3/runtime-pallet-library/blob/main/mock-builder/tests/pallet.rs)
-//! to have a user view of how to use a it.
+//! to have a user view of how to use it.
 //! It supports any kind of trait, with reference
 //! parameters and generics at trait level and method level.
 //!
@@ -150,40 +150,40 @@
 //! // This trait is optional, but usually you would need a considerable
 //! // number of types for your mock. Follows this pattern to configure things
 //! // can help you managing generics and scales better for new additions.
-//! pub trait Config {
-//!     type AssocA;
-//!     type AssocB;
-//! }
-//!
-//! // You can also add extra types to create different types.
-//! // Similar to the Substrate `pallet::Instance`
-//! pub struct Mock<T>(std::marker::PhantomData<T>);
-//!
-//! impl<T: Config> Mock<T> {
-//!     fn mock_foo(f: impl Fn() -> T::AssocA + 'static) {
-//!         register_call!(move |()| f())
-//!     }
-//!
-//!     fn mock_bar(f: impl Fn(u64, T::AssocB) -> u32 + 'static) {
-//!         register_call!(move |(a, b)| f(a, b))
-//!     }
-//! }
-//!
-//! impl<T: Config> TraitA for Mock<T> {
-//!     type AssocA = T::AssocA;
-//!
-//!     fn foo() -> Self::AssocA {
-//!         execute_call!(())
-//!     }
-//! }
-//!
-//! impl<T: Config> TraitB for Mock<T> {
-//!     type AssocB = T::AssocB;
-//!
-//!     fn bar(a: u64, b: Self::AssocB) -> u32 {
-//!         execute_call!((a, b))
-//!     }
-//! }
+pub trait Config {
+    type AssocA;
+    type AssocB;
+}
+
+// You can also add extra types to create different types.
+// Similar to the Substrate `pallet::Instance`
+pub struct Mock<T>(std::marker::PhantomData<T>);
+
+impl<T: Config> Mock<T> {
+    fn mock_foo(f: impl Fn() -> T::AssocA + 'static) {
+        register_call!(move |()| f())
+    }
+
+    fn mock_bar(f: impl Fn(u64, T::AssocB) -> u32 + 'static) {
+        register_call!(move |(a, b)| f(a, b))
+    }
+}
+
+impl<T: Config> TraitA for Mock<T> {
+    type AssocA = T::AssocA;
+
+    fn foo() -> Self::AssocA {
+        execute_call!(())
+    }
+}
+
+impl<T: Config> TraitB for Mock<T> {
+    type AssocB = T::AssocB;
+
+    fn bar(a: u64, b: Self::AssocB) -> u32 {
+        execute_call!((a, b))
+    }
+}
 //! ```
 //!
 //! If types for the closure of `mock_*` method and trait method don't match,
