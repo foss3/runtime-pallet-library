@@ -268,6 +268,8 @@ pub use storage::CallId;
 /// Prefix that the register functions should have.
 pub const MOCK_FN_PREFIX: &str = "mock_";
 
+const HELP_MSG: &str = "Be sure your mock_<method> matches your trait <method> name and type.";
+
 /// Register a mock function into the mock function storage.
 /// This function should be called with a locator used as a function
 /// identification.
@@ -300,10 +302,12 @@ where
 
 	let call_id = get(location.get(TraitInfo::Yes))
 		.or_else(|| get(location.get(TraitInfo::No)))
-		.unwrap_or_else(|| panic!("Mock was not found. Location: {location:?}"));
+		.unwrap_or_else(|| {
+			panic!("mock-builder ERROR: Mock was not found at: {location:#?}\n{HELP_MSG}")
+		});
 
 	storage::execute_call(call_id, input).unwrap_or_else(|err| {
-		panic!("{err}. Location: {location:?}");
+		panic!("mock-builder ERROR: {err} at: {location:#?}\n{HELP_MSG}");
 	})
 }
 
