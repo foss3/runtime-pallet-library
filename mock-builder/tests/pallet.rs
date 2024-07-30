@@ -24,7 +24,7 @@ pub trait Storage {
 #[frame_support::pallet(dev_mode)]
 pub mod pallet_mock_test {
 	use frame_support::pallet_prelude::*;
-	use mock_builder::{execute_call, register_call};
+	use mock_builder::{execute_call, register_call, CallHandler};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {}
@@ -44,8 +44,9 @@ pub mod pallet_mock_test {
 			register_call!(move |(a, b)| f(a, b));
 		}
 
-		pub fn mock_qux(f: impl Fn(String) -> bool + 'static) {
-			register_call!(f);
+		// Returning a `CallHandler` is optional to give more capabilities to the mock
+		pub fn mock_qux(f: impl Fn(String) -> bool + 'static) -> CallHandler {
+			register_call!(f) // <- remove the final ;
 		}
 
 		pub fn mock_generic_input<A: Into<i32>, B: Into<u32>>(f: impl Fn(A, B) -> usize + 'static) {
@@ -194,6 +195,26 @@ mod test {
 			MockTest::mock_qux(|p1| &p1 == "hello");
 
 			assert_eq!(MockTest::qux("hello".into()), true);
+		});
+	}
+
+	#[test]
+	fn basic_several_times() {
+		System::externalities().execute_with(|| {
+			let handler1 = MockTest::mock_qux(|p1| &p1 == "hello");
+
+			assert_eq!(MockTest::qux("hello".into()), true);
+			assert_eq!(MockTest::qux("hello".into()), true);
+			assert_eq!(MockTest::qux("world".into()), false);
+
+			assert_eq!(handler1.times(), 3);
+
+			let handler2 = MockTest::mock_qux(|p1| &p1 == "hello");
+
+			assert_eq!(MockTest::qux("hello".into()), true);
+
+			assert_eq!(handler1.times(), 3);
+			assert_eq!(handler2.times(), 1); // a new handler active
 		});
 	}
 
