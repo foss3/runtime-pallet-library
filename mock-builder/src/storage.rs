@@ -9,13 +9,27 @@ use std::{
 	cell::RefCell,
 	collections::HashMap,
 	fmt,
-	sync::{Arc, Mutex},
+	sync::{
+		atomic::{AtomicU32, Ordering},
+		Arc, Mutex,
+	},
 };
 
 use super::util::TypeSignature;
 
 /// Identify a call in the call storage
 pub type CallId = u64;
+
+#[derive(Default, Clone)]
+pub struct CallHandler {
+	times_called: Arc<AtomicU32>,
+}
+
+impl CallHandler {
+	pub fn times(&self) -> u32 {
+		self.times_called.load(Ordering::Relaxed)
+	}
+}
 
 struct CallInfo {
 	/// Closure identification
@@ -26,6 +40,9 @@ struct CallInfo {
 	/// since the type at compiler time is lost in the `u128` representation of
 	/// the closure.
 	type_signature: TypeSignature,
+
+	/// A handler to control the mocked method
+	handler: CallHandler,
 }
 
 type Registry = HashMap<CallId, Arc<Mutex<CallInfo>>>;
@@ -57,7 +74,7 @@ impl fmt::Display for Error {
 
 /// Register a call into the call storage.
 /// The registered call can be uniquely identified by the returned `CallId`.
-pub fn register_call<F: Fn(I) -> O + 'static, I, O>(f: F) -> CallId {
+pub fn register_call<F: Fn(I) -> O + 'static, I, O>(f: F) -> (CallId, CallHandler) {
 	// We box the closure in order to store it in a fixed place of memory,
 	// and handle it in a more generic way without knowing the specific closure
 	// implementation.
@@ -66,6 +83,8 @@ pub fn register_call<F: Fn(I) -> O + 'static, I, O>(f: F) -> CallId {
 	// We're only interested in the memory address of the closure.
 	// Box is never dropped after this call.
 	let ptr: *const dyn Fn(I) -> O = Box::into_raw(f);
+
+	let handler = CallHandler::default();
 
 	let call = CallInfo {
 		// We need the transmutation to forget about the type of the closure at compile time,
@@ -76,14 +95,17 @@ pub fn register_call<F: Fn(I) -> O + 'static, I, O>(f: F) -> CallId {
 		// Since we've lost the type representation at compile time, we need to store the type
 		// representation at runtime, in order to recover later the correct closure
 		type_signature: TypeSignature::new::<I, O>(),
+		handler: handler.clone(),
 	};
 
-	CALLS.with(|state| {
+	let call_id = CALLS.with(|state| {
 		let registry = &mut *state.borrow_mut();
 		let call_id = registry.len() as u64;
 		registry.insert(call_id, Arc::new(Mutex::new(call)));
 		call_id
-	})
+	});
+
+	(call_id, handler)
 }
 
 /// Execute a call from the call storage identified by a `call_id`.
@@ -120,7 +142,11 @@ pub fn execute_call<I, O>(call_id: CallId, input: I) -> Result<O, Error> {
 		&*ptr
 	};
 
-	Ok(f(input))
+	let output = f(input);
+
+	call.handler.times_called.fetch_add(1, Ordering::Relaxed);
+
+	Ok(output)
 }
 
 #[cfg(test)]
@@ -130,16 +156,31 @@ mod tests {
 	#[test]
 	fn correct_type() {
 		let func_1 = |n: u8| -> usize { 23 * n as usize };
-		let call_id_1 = register_call(func_1);
+		let (call_id_1, handler) = register_call(func_1);
 		let result = execute_call::<_, usize>(call_id_1, 2u8);
 
 		assert_eq!(result, Ok(46));
+		assert_eq!(handler.times(), 1);
+	}
+
+	#[test]
+	fn correct_type_several_calls() {
+		let func_1 = |n: u8| -> usize { 23 * n as usize };
+		let (call_id_1, handler) = register_call(func_1);
+
+		let result = execute_call::<_, usize>(call_id_1, 2u8);
+		assert_eq!(result, Ok(46));
+
+		let result = execute_call::<_, usize>(call_id_1, 3u8);
+		assert_eq!(result, Ok(69));
+
+		assert_eq!(handler.times(), 2);
 	}
 
 	#[test]
 	fn different_input_type() {
 		let func_1 = |n: u8| -> usize { 23 * n as usize };
-		let call_id_1 = register_call(func_1);
+		let (call_id_1, handler) = register_call(func_1);
 		let result = execute_call::<_, usize>(call_id_1, 'a');
 
 		assert_eq!(
@@ -149,12 +190,14 @@ mod tests {
 				found: TypeSignature::new::<u8, usize>()
 			})
 		);
+
+		assert_eq!(handler.times(), 0);
 	}
 
 	#[test]
 	fn different_output_type() {
 		let func_1 = |n: u8| -> usize { 23 * n as usize };
-		let call_id_1 = register_call(func_1);
+		let (call_id_1, handler) = register_call(func_1);
 		let result = execute_call::<_, char>(call_id_1, 2u8);
 
 		assert_eq!(
@@ -164,6 +207,8 @@ mod tests {
 				found: TypeSignature::new::<u8, usize>()
 			})
 		);
+
+		assert_eq!(handler.times(), 0);
 	}
 
 	#[test]
