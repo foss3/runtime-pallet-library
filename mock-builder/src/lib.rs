@@ -11,13 +11,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-//! `mock-builder` allows you to create *mock pallets*.
-//! A *mock pallet* is a regular pallet that implements some traits whose
-//! behavior can be implemented on the fly by closures. They are perfect for
-//! testing because they allow you to customize each test case, getting
-//! organized and accurate tests for your pallet. *Mock pallet* is not just a
-//! trait mocked, it's a whole pallet that can implement one or more traits and
-//! can be added to runtimes.
+//! `mock-builder` allows you to mock traits in Substrate environments.
+//! It does it by helping you creating types that implements those traits with
+//! mocked methods. Using them for testing allow you to customize each test
+//! case, getting organized and accurate tests for your pallet.
 //!
 //! # Motivation
 //!
@@ -48,14 +45,16 @@
 //!
 //! There are other crates focusing on this problem,
 //! such as [`mockall`](https://docs.rs/mockall/latest/mockall/),
-//! but they mock traits. Instead, this crate gives you an entire pallet
-//! ready to use in any runtime, implementing the number of traits you specify.
+//! but they do not know about the Substrate storage life cycle used by
+//! your pallets. This crate allows you to create a mocked type ready to use in
+//! your current tests, without worring about setting up or freeing any inner
+//! state used by the mock.
 //!
-//! ## *Mock pallet* usage
+//! ## Usage
 //!
 //! Suppose that in our pallet, which we'll call it `my_pallet`, we have an
-//! associated type in our `Config`, which implements traits `TraitA` and
-//! `TraitB`. Those traits are defined as follows:
+//! associated type in our `Config`, called `AB`, which implements traits
+//! `TraitA` and `TraitB`. Those traits are defined as follows:
 //!
 //! ```
 //! trait TraitA {
@@ -72,27 +71,18 @@
 //! ```
 //!
 //! We have a really huge pallet that implements a specific behavior for those
-//! traits, but we want to get rid of such dependency so we [generate a *mock
-//! pallet*](#mock-pallet-creation), we'll call it `pallet_mock_dep`.
-//!
-//! We can add this *mock pallet* to the runtime as usual:
+//! traits, but we want to get rid of such dependency so we
+//! [generate a mock](#mock-type-creation), and we configure it:
 //!
 //! ```ignore
-//! frame_support::construct_runtime!(
-//!     pub struct Runtime {
-//!         System: frame_system,
-//!         MockDep: pallet_mock_dep,
-//!         MyPallet: my_pallet,
-//!     }
-//! );
-//! ```
-//!
-//! And we configure it as a regular pallet:
-//!
-//! ```ignore
-//! impl pallet_mock_dep::Config for Runtime {
+//! pub type MyMock = my_mock::Mock<Runtime>;
+//! impl my_mock::Config for Runtime {
 //!     type AssocA = bool;
 //!     type AssocB = u8;
+//! }
+//!
+//! impl my_pallet::Config for Runtime {
+//!     type AB = MyMock // Tell our pallet we want to use this mock.
 //! }
 //! ```
 //!
@@ -120,18 +110,18 @@
 //!
 //! Take a look to the [pallet
 //! tests](https://github.com/foss3/runtime-pallet-library/blob/main/mock-builder/tests/pallet.rs)
-//! to have a user view of how to use a *mock pallet*.
+//! to have a user view of how to use it.
 //! It supports any kind of trait, with reference
 //! parameters and generics at trait level and method level.
 //!
-//! ## Mock pallet creation
+//! ## Mock type creation
 //!
-//! **NOTE: There is a working progress on this part to generate *mock pallets*
-//! automatically using procedural macros. Once done, all this part can be
+//! **NOTE: There is a working progress on this part to generate mocked types
+//! automatically using procedural macros. Once done, all this part could be
 //! auto-generated.**
 //!
 //! This crate exports two macros [`register_call!()`] and [`execute_call!()`]
-//! that allow you to build a *mock pallet*.
+//! that allow you to build your mocked type.
 //!
 //! - [`register_call!()`] registers a closure where you can define the
 //! mock behavior for that method. The method which registers the closure must
@@ -140,81 +130,58 @@
 //! - [`execute_call!()`] is placed in the trait method implementation and will
 //!   call the closure previously registered by [`register_call!()`]
 //!
-//! The only condition to use these macros is to have the following storage in
-//! the pallet (it's safe to just copy and paste this snippet in your pallet):
-//!
-//! ```
-//! # #[frame_support::pallet(dev_mode)]
-//! # mod pallet {
-//! # use frame_support::pallet_prelude::*;
-//! # #[pallet::config]
-//! # pub trait Config: frame_system::Config { }
-//! # #[pallet::pallet]
-//! # pub struct Pallet<T>(_);
-//!
-//! #[pallet::storage]
-//! type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
-//!
-//! # }
-//! ```
-//!
-//! Following the above example, generating a *mock pallet* for both `TraitA`
+//! Following the above example, generating a mocked type for both `TraitA`
 //! and `TraitB` is done as follows:
-//!
 //! ```
-//! #[frame_support::pallet(dev_mode)]
-//! pub mod pallet {
-//!     # trait TraitA {
-//!     #     type AssocA;
-//!     #
-//!     #     fn foo() -> Self::AssocA;
-//!     # }
-//!     #
-//!     # trait TraitB {
-//!     #     type AssocB;
-//!     #
-//!     #     fn bar(a: u64, b: Self::AssocB) -> u32;
-//!     # }
+//! # trait TraitA {
+//! #     type AssocA;
+//! #
+//! #     fn foo() -> Self::AssocA;
+//! # }
+//! #
+//! # trait TraitB {
+//! #     type AssocB;
+//! #
+//! #     fn bar(a: u64, b: Self::AssocB) -> u32;
+//! # }
 //!
-//!     use frame_support::pallet_prelude::*;
-//!     use mock_builder::{execute_call, register_call};
+//! use mock_builder::{execute_call, register_call};
 //!
-//!     #[pallet::config]
-//!     pub trait Config: frame_system::Config {
-//!         type AssocA;
-//!         type AssocB;
+//! // This trait is optional, but usually you would need a considerable
+//! // number of types for your mock. Follows this pattern to configure things
+//! // can help you managing generics and scales better for new additions.
+//! pub trait Config {
+//!     type AssocA;
+//!     type AssocB;
+//! }
+//!
+//! // You can also add extra types to create different types.
+//! // Similar to the Substrate `pallet::Instance`
+//! pub struct Mock<T>(std::marker::PhantomData<T>);
+//!
+//! impl<T: Config> Mock<T> {
+//!     fn mock_foo(f: impl Fn() -> T::AssocA + 'static) {
+//!         register_call!(move |()| f());
 //!     }
 //!
-//!     #[pallet::pallet]
-//!     pub struct Pallet<T>(_);
-//!
-//!     #[pallet::storage]
-//!     type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
-//!
-//!     impl<T: Config> Pallet<T> {
-//!         fn mock_foo(f: impl Fn() -> T::AssocA + 'static) {
-//!             register_call!(move |()| f());
-//!         }
-//!
-//!         fn mock_bar(f: impl Fn(u64, T::AssocB) -> u32 + 'static) {
-//!             register_call!(move |(a, b)| f(a, b));
-//!         }
+//!     fn mock_bar(f: impl Fn(u64, T::AssocB) -> u32 + 'static) {
+//!         register_call!(move |(a, b)| f(a, b));
 //!     }
+//! }
 //!
-//!     impl<T: Config> TraitA for Pallet<T> {
-//!         type AssocA = T::AssocA;
+//! impl<T: Config> TraitA for Mock<T> {
+//!     type AssocA = T::AssocA;
 //!
-//!         fn foo() -> Self::AssocA {
-//!             execute_call!(())
-//!         }
+//!     fn foo() -> Self::AssocA {
+//!         execute_call!(())
 //!     }
+//! }
 //!
-//!     impl<T: Config> TraitB for Pallet<T> {
-//!         type AssocB = T::AssocB;
+//! impl<T: Config> TraitB for Mock<T> {
+//!     type AssocB = T::AssocB;
 //!
-//!         fn bar(a: u64, b: Self::AssocB) -> u32 {
-//!             execute_call!((a, b))
-//!         }
+//!     fn bar(a: u64, b: Self::AssocB) -> u32 {
+//!         execute_call!((a, b))
 //!     }
 //! }
 //! ```
@@ -229,7 +196,6 @@
 //! In some cases it's pretty common making a mock that returns a value that was
 //! set previously by another mock. For this case you can define your "getter"
 //! mock inside the definition of the "setter" mock, as follows:
-//!
 //! ```ignore
 //! MyMock::mock_set(|value| MyMock::mock_get(move || value));
 //! ```
@@ -237,9 +203,8 @@
 //! Any call to `get()` will return the last value given to `set()`.
 //!
 //! #### Check internal calls are ordered
-//!
-//! If you want to test some mocks method are calle in some order, you can
-//! define them nested, in the expected order they must be called
+//! If you want to test some mock methods are called in some order, you can
+//! define them nested. They must be called in that expected order.
 //!
 //! ```ignore
 //! MyMock::mock_first(|| {
@@ -253,7 +218,7 @@
 //!
 //! // The next method only will be succesful
 //! // if it makes the internal calls in order
-//! MyPallet::calls_first_second_third();
+//! MyPallet::calls_first_then_second_then_third();
 //! ```
 //!
 //! #### Check how many times a mock is called
@@ -281,7 +246,8 @@ pub mod location;
 mod util;
 
 use location::{FunctionLocation, TraitInfo};
-pub use storage::{CallHandler, CallId};
+pub use storage::CallHandler;
+use storage::CallId;
 
 /// Prefix that the register functions should have.
 pub const MOCK_FN_PREFIX: &str = "mock_";
@@ -295,7 +261,7 @@ pub fn register<Locator, F, I, O, Insert>(locator: Locator, f: F, insert: Insert
 where
 	Locator: Fn(),
 	F: Fn(I) -> O + 'static,
-	Insert: Fn(String, CallId),
+	Insert: Fn(&[u8], &CallId),
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
@@ -305,7 +271,7 @@ where
 
 	let (call_id, handler) = storage::register_call(f);
 
-	insert(location.get(TraitInfo::Whatever), call_id);
+	insert(location.get(TraitInfo::Whatever).as_bytes(), &call_id);
 
 	handler
 }
@@ -316,14 +282,14 @@ where
 pub fn execute<Locator, I, O, Get>(locator: Locator, input: I, get: Get) -> O
 where
 	Locator: Fn(),
-	Get: Fn(String) -> Option<CallId>,
+	Get: Fn(&[u8]) -> Option<CallId>,
 {
 	let location = FunctionLocation::from(locator)
 		.normalize()
 		.append_type_signature::<I, O>();
 
-	let call_id = get(location.get(TraitInfo::Yes))
-		.or_else(|| get(location.get(TraitInfo::No)))
+	let call_id = get(location.get(TraitInfo::Yes).as_bytes())
+		.or_else(|| get(location.get(TraitInfo::No).as_bytes()))
 		.unwrap_or_else(|| {
 			panic!("mock-builder ERROR: Mock was not found at: {location:#?}\n{HELP_MSG}")
 		});
@@ -338,16 +304,7 @@ where
 #[macro_export]
 macro_rules! register_call {
 	($f:expr) => {{
-		$crate::register(|| (), $f, CallIds::<T>::insert)
-	}};
-}
-
-/// Register a mock function into the mock function storage for a pallet with
-/// instances. Same as `register()` but it uses as locator who calls this macro.
-#[macro_export]
-macro_rules! register_call_instance {
-	($f:expr) => {{
-		$crate::register(|| (), $f, CallIds::<T, I>::insert)
+		$crate::register(|| (), $f, frame_support::storage::unhashed::put)
 	}};
 }
 
@@ -356,15 +313,6 @@ macro_rules! register_call_instance {
 #[macro_export]
 macro_rules! execute_call {
 	($input:expr) => {{
-		$crate::execute(|| (), $input, CallIds::<T>::get)
-	}};
-}
-
-/// Execute a function from the function storage for a pallet with instances.
-/// Same as `execute()` but it uses as locator who calls this macro.
-#[macro_export]
-macro_rules! execute_call_instance {
-	($input:expr) => {{
-		$crate::execute(|| (), $input, CallIds::<T, I>::get)
+		$crate::execute(|| (), $input, frame_support::storage::unhashed::get)
 	}};
 }

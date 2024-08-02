@@ -9,7 +9,7 @@ General purpose utilities and pallets for [_Substrate_](https://substrate.io/).
 
 ### Utilities
 
-- [`mock-builder`](mock-builder): Build mock pallets from traits
+- [`mock-builder`](mock-builder): Build mocks from traits for Substrate
 
 ### Pallets
 

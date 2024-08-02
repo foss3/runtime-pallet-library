@@ -21,21 +21,16 @@ pub trait Storage {
 	fn get() -> i32;
 }
 
-#[frame_support::pallet(dev_mode)]
-pub mod pallet_mock_test {
-	use frame_support::pallet_prelude::*;
+pub mod mock_test {
 	use mock_builder::{execute_call, register_call, CallHandler};
 
-	#[pallet::config]
-	pub trait Config: frame_system::Config {}
+	pub trait Config {
+		type AccountId;
+	}
 
-	#[pallet::pallet]
-	pub struct Pallet<T>(_);
+	pub struct Mock<T, I>(std::marker::PhantomData<(T, I)>);
 
-	#[pallet::storage]
-	type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
-
-	impl<T: Config> Pallet<T> {
+	impl<T: Config, I> Mock<T, I> {
 		pub fn mock_foo(f: impl Fn(String, Option<u64>) + 'static) {
 			register_call!(move |(a, b)| f(a, b));
 		}
@@ -85,7 +80,7 @@ pub mod pallet_mock_test {
 		}
 	}
 
-	impl<T: Config> super::TraitA for Pallet<T> {
+	impl<T: Config, I> super::TraitA for Mock<T, I> {
 		fn foo(a: String, b: Option<u64>) {
 			execute_call!((a, b))
 		}
@@ -99,7 +94,7 @@ pub mod pallet_mock_test {
 		}
 	}
 
-	impl<T: Config> super::TraitB for Pallet<T> {
+	impl<T: Config, I> super::TraitB for Mock<T, I> {
 		fn qux(a: String) -> bool {
 			execute_call!(a)
 		}
@@ -121,13 +116,13 @@ pub mod pallet_mock_test {
 		}
 	}
 
-	impl<T: Config> super::TraitGen<T::AccountId> for Pallet<T> {
+	impl<T: Config, I> super::TraitGen<T::AccountId> for Mock<T, I> {
 		fn generic() -> u32 {
 			execute_call!(())
 		}
 	}
 
-	impl<T: Config> super::Storage for Pallet<T> {
+	impl<T: Config, I> super::Storage for Mock<T, I> {
 		fn set(a: i32) {
 			execute_call!(a)
 		}
@@ -162,12 +157,11 @@ pub mod my_pallet {
 mod mock {
 	use frame_support::derive_impl;
 
-	use super::{my_pallet, pallet_mock_test};
+	use super::{mock_test, my_pallet};
 
 	frame_support::construct_runtime!(
 		pub struct Runtime {
 			System: frame_system,
-			MockTest: pallet_mock_test,
 			MyPallet: my_pallet,
 		}
 	);
@@ -177,10 +171,13 @@ mod mock {
 		type Block = frame_system::mocking::MockBlock<Runtime>;
 	}
 
-	impl pallet_mock_test::Config for Runtime {}
+	pub type MockTest = mock_test::Mock<Runtime, ()>;
+	impl mock_test::Config for Runtime {
+		type AccountId = <Runtime as frame_system::Config>::AccountId;
+	}
 
 	impl my_pallet::Config for Runtime {
-		type ActionAB = pallet_mock_test::Pallet<Runtime>;
+		type ActionAB = MockTest;
 	}
 }
 

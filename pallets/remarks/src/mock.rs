@@ -24,7 +24,6 @@ construct_runtime!(
 	pub struct Runtime {
 		System: frame_system,
 		Balances: pallet_balances,
-		RemarkDispatchHandlerMock: pallet_mock_test,
 		Remarks: pallet_remarks,
 		Utility: pallet_utility,
 		Proxy: pallet_proxy,
@@ -63,49 +62,48 @@ impl Default for TestRemark {
 }
 
 #[allow(unused_imports)]
-#[frame_support::pallet(dev_mode)]
-mod pallet_mock_test {
+mod remark_dispatch_handler_mock {
 	use frame_support::pallet_prelude::*;
 	use mock_builder::{execute_call, register_call};
 
 	use crate::{RemarkArgs, RemarkDispatchHandler};
 
-	#[pallet::config]
-	pub trait Config: frame_system::Config + crate::Config {}
+	pub trait Config {
+		type RemarkArgs;
+	}
 
-	#[pallet::pallet]
-	pub struct Pallet<T>(_);
+	pub struct Mock<T>(std::marker::PhantomData<T>);
 
-	#[pallet::storage]
-	pub(super) type CallIds<T: Config> = StorageMap<_, _, String, mock_builder::CallId>;
-
-	impl<T: Config> Pallet<T> {
-		pub fn mock_pre_dispatch_check(f: impl Fn(RemarkArgs<T>) -> DispatchResult + 'static) {
+	impl<T: Config> Mock<T> {
+		pub fn mock_pre_dispatch_check(f: impl Fn(T::RemarkArgs) -> DispatchResult + 'static) {
 			register_call!(move |t| f(t));
 		}
 
-		pub fn mock_post_dispatch_check(f: impl Fn(RemarkArgs<T>) -> DispatchResult + 'static) {
+		pub fn mock_post_dispatch_check(f: impl Fn(T::RemarkArgs) -> DispatchResult + 'static) {
 			register_call!(move |t| f(t));
 		}
 	}
 
-	impl<T: Config> RemarkDispatchHandler<RemarkArgs<T>> for Pallet<T> {
-		fn pre_dispatch_check(t: RemarkArgs<T>) -> DispatchResult {
+	impl<T: Config> RemarkDispatchHandler<T::RemarkArgs> for Mock<T> {
+		fn pre_dispatch_check(t: T::RemarkArgs) -> DispatchResult {
 			execute_call!(t)
 		}
 
-		fn post_dispatch_check(t: RemarkArgs<T>) -> DispatchResult {
+		fn post_dispatch_check(t: T::RemarkArgs) -> DispatchResult {
 			execute_call!(t)
 		}
 	}
 }
 
-impl pallet_mock_test::Config for Runtime {}
+pub type RemarkDispatchHandlerMock = remark_dispatch_handler_mock::Mock<Runtime>;
+impl remark_dispatch_handler_mock::Config for Runtime {
+	type RemarkArgs = crate::RemarkArgs<Runtime>;
+}
 
 impl Config for Runtime {
 	type MaxRemarksPerCall = MaxRemarksPerCall;
 	type Remark = TestRemark;
-	type RemarkDispatchHandler = pallet_mock_test::Pallet<Runtime>;
+	type RemarkDispatchHandler = RemarkDispatchHandlerMock;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

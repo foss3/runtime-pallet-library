@@ -1,6 +1,6 @@
 [package]
 authors = ["Centrifuge <admin@centrifuge.io>"]
-description = "Build mock pallets from traits"
+description = "Build mocks from traits for Substrate"
 edition = "2021"
 license = "LGPL-3.0"
 name = "mock-builder"
