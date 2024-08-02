@@ -161,11 +161,11 @@
 //!
 //! impl<T: Config> Mock<T> {
 //!     fn mock_foo(f: impl Fn() -> T::AssocA + 'static) {
-//!         register_call!(move |()| f())
+//!         register_call!(move |()| f());
 //!     }
 //!
 //!     fn mock_bar(f: impl Fn(u64, T::AssocB) -> u32 + 'static) {
-//!         register_call!(move |(a, b)| f(a, b))
+//!         register_call!(move |(a, b)| f(a, b));
 //!     }
 //! }
 //!
@@ -192,6 +192,7 @@
 //! ## Mock Patterns
 //!
 //! #### Storage pattern
+//!
 //! In some cases it's pretty common making a mock that returns a value that was
 //! set previously by another mock. For this case you can define your "getter"
 //! mock inside the definition of the "setter" mock, as follows:
@@ -204,6 +205,7 @@
 //! #### Check internal calls are ordered
 //! If you want to test some mock methods are called in some order, you can
 //! define them nested. They must be called in that expected order.
+//!
 //! ```ignore
 //! MyMock::mock_first(|| {
 //!     MyMock::mock_second(|| {
@@ -218,6 +220,22 @@
 //! // if it makes the internal calls in order
 //! MyPallet::calls_first_then_second_then_third();
 //! ```
+//!
+//! #### Check how many times a mock is called
+//!
+//! Each mock can return a `CallHandler` which has `times()` indicating how many
+//! times it was called:
+//! ```ignore
+//! let handler = MyMock::mock_foo(|| ());
+//! MyPallet::foo();
+//! MyPallet::foo();
+//! MyPallet::foo();
+//! assert_eq!(handler.times(), 3);
+//!
+//! // Creating the mock again implies reset the counter
+//! let handler = MyMock::mock_foo(|| ());
+//! assert_eq!(handler.times(), 0);
+//! ```
 
 /// Provide functions for register/execute calls
 pub mod storage;
@@ -228,7 +246,7 @@ pub mod location;
 mod util;
 
 use location::{FunctionLocation, TraitInfo};
-pub use storage::CallId;
+pub use storage::{CallHandler, CallId};
 
 /// Prefix that the register functions should have.
 pub const MOCK_FN_PREFIX: &str = "mock_";
@@ -238,7 +256,7 @@ const HELP_MSG: &str = "Be sure your mock_<method> matches your trait <method> n
 /// Register a mock function into the mock function storage.
 /// This function should be called with a locator used as a function
 /// identification.
-pub fn register<Locator, F, I, O, Insert>(locator: Locator, f: F, insert: Insert)
+pub fn register<Locator, F, I, O, Insert>(locator: Locator, f: F, insert: Insert) -> CallHandler
 where
 	Locator: Fn(),
 	F: Fn(I) -> O + 'static,
@@ -250,10 +268,11 @@ where
 		.assimilate_trait_prefix()
 		.append_type_signature::<I, O>();
 
-	insert(
-		location.get(TraitInfo::Whatever).as_bytes(),
-		&storage::register_call(f),
-	)
+	let (call_id, handler) = storage::register_call(f);
+
+	insert(location.get(TraitInfo::Whatever).as_bytes(), &call_id);
+
+	handler
 }
 
 /// Execute a function from the function storage.
@@ -284,7 +303,7 @@ where
 #[macro_export]
 macro_rules! register_call {
 	($f:expr) => {{
-		$crate::register(|| (), $f, frame_support::storage::unhashed::put);
+		$crate::register(|| (), $f, frame_support::storage::unhashed::put)
 	}};
 }
 
