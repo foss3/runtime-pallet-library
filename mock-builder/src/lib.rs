@@ -246,7 +246,8 @@ pub mod location;
 mod util;
 
 use location::{FunctionLocation, TraitInfo};
-pub use storage::{CallHandler, CallId};
+pub use storage::CallHandler;
+use storage::CallId;
 
 /// Prefix that the register functions should have.
 pub const MOCK_FN_PREFIX: &str = "mock_";
